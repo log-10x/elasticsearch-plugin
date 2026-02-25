@@ -1,0 +1,158 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.log10x'
+version = "${l1esVersion}.os.${opensearchVersion}"
+
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+processResources {
+    filesMatching("**/l1es.properties") {
+        expand(project.properties)
+    }
+}
+
+// Generate OpenSearch sources from the Elasticsearch module by applying
+// package renames and class renames. Files with real API differences are
+// maintained manually in src/main/java/ and excluded from generation.
+task generateSources(type: Copy) {
+    from '../src/main/java'
+    into "$buildDir/generated-sources/java"
+
+    // Exclude files that have manual overrides in src/main/java/
+    exclude '**/org/elasticsearch/plugin/log10x/L1esPlugin.java'
+    exclude '**/com/log10x/l1es/fetch/L1esFetchSubPhase.java'
+    exclude '**/com/log10x/l1es/query/match/L1esMultiMatchQueryBuilder.java'
+    exclude '**/com/log10x/l1es/job/es/ElasticJob.java'
+
+    // Exclude ES-only files (OpenSearch uses different APIs)
+    exclude '**/com/log10x/l1es/filter/L1esQueryRewriteFilter.java'
+
+    // Rename directory paths: org/elasticsearch/ → org/opensearch/
+    eachFile { fileCopyDetails ->
+        fileCopyDetails.path = fileCopyDetails.path
+            .replace('org/elasticsearch/', 'org/opensearch/')
+    }
+
+    // Text replacements applied line-by-line. Order matters — specific before general.
+    filter { line ->
+        line
+            // --- Exception class renames ---
+            .replace('ElasticsearchStatusException', 'OpenSearchStatusException')
+            .replace('ElasticsearchException', 'OpenSearchException')
+
+            // --- General package rename ---
+            .replace('org.elasticsearch', 'org.opensearch')
+
+            // --- Class renames ---
+            .replace('SearchExecutionContext', 'QueryShardContext')
+            .replace('getSearchExecutionContext', 'getQueryShardContext')
+            .replace('MatchQueryParser', 'MatchQuery')
+
+            // --- Remove .internal from client package ---
+            .replace('org.opensearch.client.internal', 'org.opensearch.client')
+
+            // --- Nullable: org.elasticsearch.core.Nullable → org.opensearch.common.Nullable ---
+            .replace('org.opensearch.core.Nullable', 'org.opensearch.common.Nullable')
+
+            // --- Action classes moved to core ---
+            .replace('org.opensearch.action.ActionListener', 'org.opensearch.core.action.ActionListener')
+            .replace('org.opensearch.action.ActionResponse', 'org.opensearch.core.action.ActionResponse')
+
+            // --- IO stream classes moved to core ---
+            .replace('org.opensearch.common.io.stream.StreamInput', 'org.opensearch.core.common.io.stream.StreamInput')
+            .replace('org.opensearch.common.io.stream.StreamOutput', 'org.opensearch.core.common.io.stream.StreamOutput')
+            .replace('org.opensearch.common.io.stream.Writeable', 'org.opensearch.core.common.io.stream.Writeable')
+            .replace('org.opensearch.common.io.stream.NamedWriteableRegistry', 'org.opensearch.core.common.io.stream.NamedWriteableRegistry')
+
+            // --- Bytes classes moved to core ---
+            .replace('org.opensearch.common.bytes.BytesArray', 'org.opensearch.core.common.bytes.BytesArray')
+            .replace('org.opensearch.common.bytes.BytesReference', 'org.opensearch.core.common.bytes.BytesReference')
+
+            // --- RestStatus moved to core ---
+            .replace('org.opensearch.rest.RestStatus', 'org.opensearch.core.rest.RestStatus')
+
+            // --- XContent: ParseField goes to core (no xcontent subpackage) ---
+            .replace('org.opensearch.xcontent.ParseField', 'org.opensearch.core.ParseField')
+
+            // --- XContent: interfaces moved to core.xcontent ---
+            .replace('org.opensearch.xcontent.XContentParser', 'org.opensearch.core.xcontent.XContentParser')
+            .replace('org.opensearch.xcontent.XContentBuilder', 'org.opensearch.core.xcontent.XContentBuilder')
+            .replace('org.opensearch.xcontent.XContentParseException', 'org.opensearch.core.xcontent.XContentParseException')
+            .replace('org.opensearch.xcontent.NamedXContentRegistry', 'org.opensearch.core.xcontent.NamedXContentRegistry')
+            .replace('org.opensearch.xcontent.ObjectParser', 'org.opensearch.core.xcontent.ObjectParser')
+            .replace('org.opensearch.xcontent.ConstructingObjectParser', 'org.opensearch.core.xcontent.ConstructingObjectParser')
+            .replace('org.opensearch.xcontent.DeprecationHandler', 'org.opensearch.core.xcontent.DeprecationHandler')
+            .replace('org.opensearch.xcontent.ToXContent', 'org.opensearch.core.xcontent.ToXContent')
+            .replace('org.opensearch.xcontent.MediaType', 'org.opensearch.core.xcontent.MediaType')
+
+            // --- XContent: implementations stay in common.xcontent ---
+            .replace('org.opensearch.xcontent.XContentFactory', 'org.opensearch.common.xcontent.XContentFactory')
+            .replace('org.opensearch.xcontent.XContentType', 'org.opensearch.common.xcontent.XContentType')
+            .replace('org.opensearch.xcontent.XContentHelper', 'org.opensearch.common.xcontent.XContentHelper')
+            .replace('org.opensearch.xcontent.LoggingDeprecationHandler', 'org.opensearch.common.xcontent.LoggingDeprecationHandler')
+            .replace('org.opensearch.xcontent.json', 'org.opensearch.common.xcontent.json')
+
+            // --- IOUtils moved: org.elasticsearch.core.IOUtils → use Lucene's IOUtils ---
+            .replace('org.opensearch.core.IOUtils', 'org.apache.lucene.util.IOUtils')
+
+            // --- Strings moved to core ---
+            .replace('org.opensearch.common.Strings;', 'org.opensearch.core.common.Strings;')
+
+            // --- ZeroTermsQueryOption → MatchQuery.ZeroTermsQuery (inner enum in OpenSearch) ---
+            .replace('import org.opensearch.index.query.ZeroTermsQueryOption;', 'import org.opensearch.index.search.MatchQuery;')
+            .replace('ZeroTermsQueryOption', 'MatchQuery.ZeroTermsQuery')
+
+            // --- RestResponse is abstract in OpenSearch, use BytesRestResponse ---
+            .replace('import org.opensearch.rest.RestResponse;', 'import org.opensearch.rest.BytesRestResponse;\nimport org.opensearch.rest.RestResponse;')
+            .replace('new RestResponse(', 'new BytesRestResponse(')
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java', "$buildDir/generated-sources/java"]
+        }
+    }
+}
+
+compileJava.dependsOn generateSources
+
+dependencies {
+    compileOnly "org.opensearch:opensearch:${opensearchVersion}"
+    compileOnly "org.opensearch:opensearch-core:${opensearchVersion}"
+    compileOnly "org.opensearch:opensearch-x-content:${opensearchVersion}"
+    compileOnly "org.apache.lucene:lucene-core:${luceneVersion}"
+    compileOnly "org.apache.lucene:lucene-queries:${luceneVersion}"
+    compileOnly "org.apache.logging.log4j:log4j-api:2.21.1"
+
+    // Jackson is provided by OpenSearch at runtime — compileOnly to avoid jar hell
+    compileOnly "com.fasterxml.jackson.core:jackson-annotations:${jacksonDataBindVersion}"
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:${jacksonDataBindVersion}"
+    implementation "com.log10x:log10x-decoder-core:${log10xDecoderVersion}"
+    implementation "it.unimi.dsi:fastutil:8.5.13"
+}
+
+// Build plugin zip for OpenSearch installation
+task pluginZip(type: Zip) {
+    archiveBaseName = 'l1es-plugin'
+    from jar
+    from configurations.runtimeClasspath
+    from('src/main/config') {
+        into 'config'
+    }
+    from('src/main/resources/plugin-descriptor.properties')
+}
+
+pluginZip.dependsOn jar
+
+// Make build depend on pluginZip
+build.dependsOn pluginZip

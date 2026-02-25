@@ -1,13 +1,14 @@
-# L1ES — Elasticsearch Plugin for Log10x
+# L1ES — OpenSearch Plugin for Log10x
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/edge/optimizer/).
+Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/edge/optimizer/).
+
+This is the OpenSearch variant of the L1ES plugin. See the [main README](../README.md) for full documentation including Kibana transparent rewriting, the User Guide, and configuration details.
 
 | | |
 |---|---|
 | **Version** | 0.9.0 |
-| **Elasticsearch** | 8.17.0 |
 | **OpenSearch** | 2.19.0 |
 | **Java** | 17+ |
 | **License** | Apache 2.0 |
@@ -26,38 +27,44 @@ L1ES stores the templates in an internal index and, at query time:
 3. Decodes each result back to the original log line
 4. Returns the decoded content in a field you specify
 
-Standard Elasticsearch queries see only the encoded text and cannot match original content. L1ES bridges this gap in two ways:
-
-1. **Custom query types** (`l1es_match`, `l1es_match_phrase`, `l1es_multi_match`) — explicit queries for encoded fields
-2. **Transparent query rewriting** — automatically converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents, so Kibana dashboards, saved searches, and KQL queries work without changes
+Standard OpenSearch queries see only the encoded text and cannot match original content. L1ES custom query types bridge this gap.
 
 ## Quick Start
 
 ### 1. Build the Plugin
 
+From the repository root:
+
 ```bash
-./gradlew build
+./gradlew :opensearch:build
 ```
 
-This produces the plugin zip at `build/distributions/l1es-plugin-0.9.0.es.8.17.0.zip`. See [Building from Source](#building-from-source) for prerequisites and alternative build methods.
+This produces the plugin zip at `opensearch/build/distributions/l1es-plugin-0.9.0.os.2.19.0.zip`. See [Building from Source](#building-from-source) for prerequisites.
 
 ### 2. Install the Plugin
 
 ```bash
-bin/elasticsearch-plugin install file:///path/to/l1es-plugin-0.9.0.es.8.17.0.zip
+bin/opensearch-plugin install file:///path/to/l1es-plugin-0.9.0.os.2.19.0.zip
 ```
 
 Or with Docker:
 
 ```dockerfile
-FROM docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-COPY l1es-plugin-0.9.0.es.8.17.0.zip /tmp/l1es-plugin.zip
-RUN elasticsearch-plugin install --batch file:///tmp/l1es-plugin.zip
+FROM opensearchproject/opensearch:2.19.0
+COPY l1es-plugin-0.9.0.os.2.19.0.zip /tmp/l1es-plugin.zip
+RUN opensearch-plugin install --batch file:///tmp/l1es-plugin.zip
+```
+
+**Important:** After installation, verify that the config file exists at `config/l1es-plugin/l1es.yml` inside your OpenSearch installation directory. If the file is not there, copy it manually:
+
+```bash
+mkdir -p config/l1es-plugin
+cp plugins/l1es-plugin/config/l1es.yml config/l1es-plugin/l1es.yml
 ```
 
 ### 3. Initialize the Plugin
 
-After Elasticsearch starts:
+After OpenSearch starts:
 
 ```bash
 curl -X POST 'http://localhost:9200/_l1es/setup'
@@ -133,40 +140,9 @@ curl -X POST 'http://localhost:9200/my-logs/_search' \
 
 The `fields` parameter is required to trigger the fetch sub-phase that decodes results. The decoded content appears in the `decoded_message` field (or whatever you specified as `dest`).
 
-## Transparent Kibana Support
-
-L1ES can transparently rewrite standard Elasticsearch queries so that Kibana dashboards, saved searches, and KQL queries work against encoded data without any changes.
-
-When `query_rewrite_enabled` is `true` (the default), L1ES intercepts incoming search requests and converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents. If the target field is not encoded, the query falls back to standard Elasticsearch behavior automatically.
-
-When `source_decoding_enabled` is `true` (the default), L1ES decodes encoded fields in `_source` for all search responses on registered indices. Kibana document views, Discover, and dashboards display the original log text instead of the encoded `~hash,val1,val2,...` format.
-
-Together, these two features mean:
-
-- **Kibana Discover** — searches match original log content; documents display decoded text
-- **Kibana dashboards** — existing visualizations, filters, and saved searches work unchanged
-- **KQL queries** — `message: "error" AND message: "database"` matches against decoded content
-- **Alerts** — Kibana alerting rules continue to fire on the original log data
-
-No changes are needed to index mappings, index patterns, Kibana saved objects, or any client application.
-
-### Disabling Transparent Rewriting
-
-To use only the explicit `l1es_*` query types (e.g., for programmatic access where you control the query DSL), set in `config/l1es.yml`:
-
-```yaml
-flags:
-  query_rewrite_enabled: false
-  source_decoding_enabled: false
-```
-
-### OpenSearch
-
-On OpenSearch, transparent query rewriting uses a search pipeline (`l1es_query_rewrite`) instead of an action filter. The pipeline is automatically created and set as the default search pipeline for the index when you call `_l1es/add-dml-index`. The behavior is otherwise identical.
-
 ## Query Types
 
-L1ES provides three query types that mirror standard Elasticsearch queries:
+L1ES provides three query types that mirror standard OpenSearch queries:
 
 ### l1es_match
 
@@ -230,7 +206,20 @@ Parameters: `query` (required), `fields`, `type` (best_fields, most_fields, phra
 
 ## Configuration
 
-The plugin configuration is in `config/l1es.yml` inside the plugin directory:
+The plugin reads its configuration from `config/l1es-plugin/l1es.yml` inside the OpenSearch installation directory. After plugin installation, this file should be at:
+
+```
+$OPENSEARCH_HOME/config/l1es-plugin/l1es.yml
+```
+
+If it is missing, copy it from the plugin directory:
+
+```bash
+cp $OPENSEARCH_HOME/plugins/l1es-plugin/config/l1es.yml \
+   $OPENSEARCH_HOME/config/l1es-plugin/l1es.yml
+```
+
+Configuration options:
 
 ```yaml
 flags:
@@ -239,8 +228,6 @@ flags:
   match_query_enabled: true          # Enable l1es_match
   match_pharse_query_enabled: true   # Enable l1es_match_phrase
   multi_match_query_enabled: true    # Enable l1es_multi_match
-  query_rewrite_enabled: true        # Transparent rewriting of standard queries for Kibana
-  source_decoding_enabled: true      # Decode encoded fields in _source responses
 
 encoder:
   hasEncodedLinePrefix: true         # Encoded lines start with a prefix character
@@ -257,6 +244,20 @@ dmldb:
 
 The `encoder` section must match the format produced by your Log10x encoder. The defaults above match the standard Log10x output format (`~<hash>,<val1>,<val2>,...`).
 
+**Note:** If the config file is missing or unreadable, the plugin falls back to built-in defaults. The built-in defaults for the encoder use `hasEncodedLinePrefix: false` and space-separated values, which do NOT match the standard Log10x output format. Always verify the config file is present.
+
+## Differences from Elasticsearch Variant
+
+The OpenSearch plugin is functionally identical to the Elasticsearch variant. The same query types, REST API, and configuration options apply. Key differences:
+
+| | Elasticsearch | OpenSearch |
+|---|---|---|
+| Plugin file | `l1es-plugin-0.9.0.es.8.17.0.zip` | `l1es-plugin-0.9.0.os.2.19.0.zip` |
+| Install command | `elasticsearch-plugin install` | `opensearch-plugin install` |
+| Base image | `elasticsearch:8.17.0` | `opensearchproject/opensearch:2.19.0` |
+| Config path | `config/l1es-plugin/l1es.yml` (auto-copied) | `config/l1es-plugin/l1es.yml` (verify after install) |
+| Security | Disable `xpack.security` for testing | Disable security plugin for testing |
+
 ## Building from Source
 
 ### Prerequisites
@@ -268,66 +269,7 @@ All dependencies (including `log10x-decoder-core`) are resolved automatically fr
 
 ### Build
 
-```bash
-./gradlew build
-```
-
-The plugin zip is produced at `build/distributions/l1es-plugin-0.9.0.es.8.17.0.zip`.
-
-### Build with Docker (if your local Java version is incompatible)
-
-```bash
-docker run --rm \
-  -v "$(pwd)":/project \
-  -v "$HOME/.m2":/root/.m2 \
-  -w /project \
-  eclipse-temurin:17-jdk \
-  ./gradlew build
-```
-
-### Docker Image
-
-```bash
-docker build -t l1es:8.17.0 .
-docker run -d --name l1es -p 9200:9200 \
-  -e "discovery.type=single-node" \
-  -e "xpack.security.enabled=false" \
-  l1es:8.17.0
-```
-
-## Project Structure
-
-```
-├── build.gradle                     # Build configuration
-├── gradle.properties                # Version numbers
-├── Dockerfile                       # Docker image for ES + plugin
-├── src/main/
-│   ├── config/l1es.yml              # Plugin configuration
-│   ├── resources/
-│   │   └── plugin-descriptor.properties
-│   └── java/
-│       ├── com/log10x/l1es/
-│       │   ├── analysis/            # Tokenization utilities
-│       │   ├── dml/                 # Template storage and lookup
-│       │   ├── fetch/               # Fetch sub-phase (decode results + _source decoding)
-│       │   ├── filter/              # ActionFilter for transparent query rewriting
-│       │   ├── job/                 # Internal ES operations
-│       │   ├── query/               # Custom query types
-│       │   │   ├── match/           # Query builders and query implementations
-│       │   │   ├── predicate/       # Cross-check predicates (AND, phrase)
-│       │   │   └── wrap/            # TwoPhaseIterator wrappers
-│       │   └── util/                # ES and JSON utilities
-│       └── org/elasticsearch/plugin/log10x/
-│           ├── L1esPlugin.java      # Plugin entry point
-│           ├── config/              # Configuration classes
-│           └── handler/             # REST endpoint handlers
-```
-
-## OpenSearch Support
-
-L1ES also supports OpenSearch 2.19.0. The OpenSearch variant is built as a separate Gradle subproject and is functionally identical. See [opensearch/README.md](opensearch/README.md) for OpenSearch-specific instructions.
-
-Build the OpenSearch variant:
+From the repository root:
 
 ```bash
 ./gradlew :opensearch:build -x test
@@ -335,21 +277,81 @@ Build the OpenSearch variant:
 
 The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-0.9.0.os.2.19.0.zip`.
 
+To build both Elasticsearch and OpenSearch variants:
+
+```bash
+./gradlew build -x test
+```
+
+### Docker Image
+
+```bash
+docker run -d --name l1es-opensearch \
+  -p 9200:9200 \
+  -e "discovery.type=single-node" \
+  -e "DISABLE_SECURITY_PLUGIN=true" \
+  opensearchproject/opensearch:2.19.0
+
+# Install plugin
+docker cp l1es-plugin-0.9.0.os.2.19.0.zip l1es-opensearch:/tmp/
+docker exec l1es-opensearch opensearch-plugin install --batch file:///tmp/l1es-plugin-0.9.0.os.2.19.0.zip
+
+# Ensure config is in place
+docker exec l1es-opensearch mkdir -p /usr/share/opensearch/config/l1es-plugin
+docker exec l1es-opensearch cp /usr/share/opensearch/plugins/l1es-plugin/config/l1es.yml \
+  /usr/share/opensearch/config/l1es-plugin/l1es.yml
+
+docker restart l1es-opensearch
+```
+
+## Source Generation
+
+The OpenSearch plugin sources are auto-generated from the Elasticsearch plugin via a Gradle `Copy` task with text replacements (`org.elasticsearch.*` to `org.opensearch.*`, class renames, etc.). Only four files with significant API differences are manually maintained:
+
+- `L1esPlugin.java` — plugin lifecycle API
+- `L1esFetchSubPhase.java` — fetch sub-phase API
+- `L1esMultiMatchQueryBuilder.java` — transport version API
+- `ElasticJob.java` — request builder API
+
+Changes to the Elasticsearch plugin automatically propagate to the OpenSearch build.
+
 ## Compatibility
 
-| L1ES Version | Elasticsearch | OpenSearch | Java | Lucene |
-|-------------|---------------|------------|------|--------|
-| 0.9.0 | 8.17.0 | 2.19.0 | 17+ | 9.12.0 |
+| L1ES Version | OpenSearch | Java | Lucene |
+|-------------|-----------|------|--------|
+| 0.9.0 | 2.19.0 | 17+ | 9.12.0 |
 
-## Documentation
+## Troubleshooting
 
-- [Log10x Documentation](https://doc.log10x.com)
-- [Edge Optimizer Documentation](https://doc.log10x.com/apps/edge/optimizer/)
-- [Encoding & Decoding](https://doc.log10x.com/run/transform/#encoding)
+### Config not loading (queries return 0 results)
+
+Check OpenSearch logs for: `Got null settings, falling back to default`
+
+This means `config/l1es-plugin/l1es.yml` is missing. Copy it from the plugin directory and restart:
+
+```bash
+mkdir -p $OPENSEARCH_HOME/config/l1es-plugin
+cp $OPENSEARCH_HOME/plugins/l1es-plugin/config/l1es.yml \
+   $OPENSEARCH_HOME/config/l1es-plugin/l1es.yml
+```
+
+### Jackson jar conflict
+
+If you see `java.lang.LinkageError` or class loading errors mentioning Jackson, verify that the plugin zip does NOT include Jackson JARs. OpenSearch provides Jackson at runtime — bundling a second copy causes jar hell.
+
+### Plugin not loading
+
+Verify the plugin is compatible with your OpenSearch version:
+
+```bash
+curl http://localhost:9200/_l1es
+```
+
+The response should include `"l1es": "0.9.0"`. If the endpoint is not found, check the OpenSearch startup logs for plugin loading errors.
 
 ## License
 
-This repository is licensed under the [Apache License 2.0](LICENSE).
+This repository is licensed under the [Apache License 2.0](../LICENSE).
 
 ### Important: Log10x Product License Required
 
@@ -359,11 +361,6 @@ This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-
 |-----------|---------|
 | This repository (Elasticsearch/OpenSearch plugin) | Apache 2.0 (open source) |
 | Log10x Edge Optimizer | Commercial license required |
-
-**What this means:**
-- You can freely use, modify, and distribute this plugin
-- The Log10x Edge Optimizer that generates encoded events requires a paid subscription
-- A valid Log10x license is required to run the Edge Optimizer
 
 **Get Started:**
 - [Log10x Pricing](https://log10x.com/pricing)

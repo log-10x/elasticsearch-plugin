@@ -1,0 +1,22 @@
+# Build output
+build/
+bin/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.zip
+*.tar.gz
+
+# Gradle
+.gradle/
+
+# IDE
+.project
+.classpath
+.settings/
+*.iml
+.idea/
+.vscode/
+
+# OS
+.DS_Store

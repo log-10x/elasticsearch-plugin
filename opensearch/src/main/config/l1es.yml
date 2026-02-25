@@ -1,0 +1,18 @@
+flags:
+  enabled: true
+  decoding_enabled: true
+  match_query_enabled: true
+  match_pharse_query_enabled: true
+  multi_match_query_enabled: true
+  query_rewrite_enabled: true
+  source_decoding_enabled: true
+encoder:
+  hasEncodedLinePrefix: true
+  encodedLinePrefix: "~"
+  valueSeperator: ","
+dmldb:
+  indicesIndexNumberOfShards: 1
+  indicesIndexNumberOfReplicas: 1
+  dmlIndexNumberOfShards: 1
+  dmlIndexNumberOfReplicas: 1
+  dmlSizeToSearch: 10000
