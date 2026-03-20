@@ -8,7 +8,7 @@ This is the OpenSearch variant of the L1ES plugin. See the [main README](../READ
 
 | | |
 |---|---|
-| **Version** | 0.9.0 |
+| **Version** | 1.0.0 |
 | **OpenSearch** | 2.19.0 |
 | **Java** | 17+ |
 | **License** | Apache 2.0 |
@@ -39,19 +39,19 @@ From the repository root:
 ./gradlew :opensearch:build
 ```
 
-This produces the plugin zip at `opensearch/build/distributions/l1es-plugin-0.9.0.os.2.19.0.zip`. See [Building from Source](#building-from-source) for prerequisites.
+This produces the plugin zip at `opensearch/build/distributions/l1es-plugin-1.0.0.os.2.19.0.zip`. See [Building from Source](#building-from-source) for prerequisites.
 
 ### 2. Install the Plugin
 
 ```bash
-bin/opensearch-plugin install file:///path/to/l1es-plugin-0.9.0.os.2.19.0.zip
+bin/opensearch-plugin install file:///path/to/l1es-plugin-1.0.0.os.2.19.0.zip
 ```
 
 Or with Docker:
 
 ```dockerfile
 FROM opensearchproject/opensearch:2.19.0
-COPY l1es-plugin-0.9.0.os.2.19.0.zip /tmp/l1es-plugin.zip
+COPY l1es-plugin-1.0.0.os.2.19.0.zip /tmp/l1es-plugin.zip
 RUN opensearch-plugin install --batch file:///tmp/l1es-plugin.zip
 ```
 
@@ -252,7 +252,7 @@ The OpenSearch plugin is functionally identical to the Elasticsearch variant. Th
 
 | | Elasticsearch | OpenSearch |
 |---|---|---|
-| Plugin file | `l1es-plugin-0.9.0.es.8.17.0.zip` | `l1es-plugin-0.9.0.os.2.19.0.zip` |
+| Plugin file | `l1es-plugin-1.0.0.es.8.17.0.zip` | `l1es-plugin-1.0.0.os.2.19.0.zip` |
 | Install command | `elasticsearch-plugin install` | `opensearch-plugin install` |
 | Base image | `elasticsearch:8.17.0` | `opensearchproject/opensearch:2.19.0` |
 | Config path | `config/l1es-plugin/l1es.yml` (auto-copied) | `config/l1es-plugin/l1es.yml` (verify after install) |
@@ -275,7 +275,7 @@ From the repository root:
 ./gradlew :opensearch:build -x test
 ```
 
-The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-0.9.0.os.2.19.0.zip`.
+The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-1.0.0.os.2.19.0.zip`.
 
 To build both Elasticsearch and OpenSearch variants:
 
@@ -293,8 +293,8 @@ docker run -d --name l1es-opensearch \
   opensearchproject/opensearch:2.19.0
 
 # Install plugin
-docker cp l1es-plugin-0.9.0.os.2.19.0.zip l1es-opensearch:/tmp/
-docker exec l1es-opensearch opensearch-plugin install --batch file:///tmp/l1es-plugin-0.9.0.os.2.19.0.zip
+docker cp l1es-plugin-1.0.0.os.2.19.0.zip l1es-opensearch:/tmp/
+docker exec l1es-opensearch opensearch-plugin install --batch file:///tmp/l1es-plugin-1.0.0.os.2.19.0.zip
 
 # Ensure config is in place
 docker exec l1es-opensearch mkdir -p /usr/share/opensearch/config/l1es-plugin
@@ -319,7 +319,7 @@ Changes to the Elasticsearch plugin automatically propagate to the OpenSearch bu
 
 | L1ES Version | OpenSearch | Java | Lucene |
 |-------------|-----------|------|--------|
-| 0.9.0 | 2.19.0 | 17+ | 9.12.0 |
+| 1.0.0 | 2.19.0 | 17+ | 9.12.0 |
 
 ## Troubleshooting
 
@@ -347,7 +347,7 @@ Verify the plugin is compatible with your OpenSearch version:
 curl http://localhost:9200/_l1es
 ```
 
-The response should include `"l1es": "0.9.0"`. If the endpoint is not found, check the OpenSearch startup logs for plugin loading errors.
+The response should include `"l1es": "1.0.0"`. If the endpoint is not found, check the OpenSearch startup logs for plugin loading errors.
 
 ## License
 

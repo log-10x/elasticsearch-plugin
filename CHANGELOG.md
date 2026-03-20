@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0 (2026-03-20)
+
+- Upgrade `log10x-decoder-core` to 1.0.0
+
 ## 0.9.0 (2026-02-25)
 
 Initial public release.

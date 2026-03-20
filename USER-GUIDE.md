@@ -31,7 +31,7 @@ This guide covers the full workflow for using L1ES to search Log10x-compacted da
 ### Standard Installation
 
 ```bash
-bin/elasticsearch-plugin install file:///path/to/l1es-plugin-0.9.0.es.8.17.0.zip
+bin/elasticsearch-plugin install file:///path/to/l1es-plugin-1.0.0.es.8.17.0.zip
 ```
 
 Restart Elasticsearch after installation.
@@ -40,7 +40,7 @@ Restart Elasticsearch after installation.
 
 ```dockerfile
 FROM docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-COPY l1es-plugin-0.9.0.es.8.17.0.zip /tmp/l1es-plugin.zip
+COPY l1es-plugin-1.0.0.es.8.17.0.zip /tmp/l1es-plugin.zip
 RUN elasticsearch-plugin install --batch file:///tmp/l1es-plugin.zip
 ```
 
@@ -56,7 +56,7 @@ Expected response:
 {
   "name": "l1es-plugin",
   "description": "L1x support for decoding inside elasticsearch",
-  "l1es_version": "0.9.0",
+  "l1es_version": "1.0.0",
   "elasticsearch_version": "8.17.0"
 }
 ```
