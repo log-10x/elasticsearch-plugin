@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/edge/optimizer/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
 
 This is the OpenSearch variant of the L1ES plugin. See the [main README](../README.md) for full documentation including Kibana transparent rewriting, the User Guide, and configuration details.
 
@@ -23,11 +23,11 @@ Log10x compacts log events into two parts:
 L1ES stores the templates in an internal index and, at query time:
 
 1. Matches your search terms against the template patterns
-2. Finds encoded events that use matching templates
+2. Finds compact events that use matching templates
 3. Decodes each result back to the original log line
-4. Returns the decoded content in a field you specify
+4. Returns the expanded content in a field you specify
 
-Standard OpenSearch queries see only the encoded text and cannot match original content. L1ES custom query types bridge this gap.
+Standard OpenSearch queries see only the compact text and cannot match original content. L1ES custom query types bridge this gap.
 
 ## Quick Start
 
@@ -70,7 +70,7 @@ After OpenSearch starts:
 curl -X POST 'http://localhost:9200/_l1es/setup'
 ```
 
-This creates the internal indices (`l1es_dml` for template storage, `l1es_dml_indices` for field mappings). DML (Data Matching Library) is the internal template lookup engine that maps encoded events back to their original structure.
+This creates the internal indices (`l1es_dml` for template storage, `l1es_dml_indices` for field mappings). DML (Data Matching Library) is the internal template lookup engine that maps compact events back to their original structure.
 
 ### 4. Load Templates
 
@@ -92,7 +92,7 @@ curl -X POST 'http://localhost:9200/_bulk' \
 
 ### 5. Register the Encoded Field
 
-Tell L1ES which index and field contain encoded data:
+Tell L1ES which index and field contain compact data:
 
 ```bash
 curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
@@ -105,12 +105,12 @@ curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
 ```
 
 - `index_name` — your data index
-- `source` — the field containing encoded events
-- `dest` — the field name for decoded output (defaults to `source` if omitted)
+- `source` — the field containing compact events
+- `dest` — the field name for expanded output (defaults to `source` if omitted)
 
 ### 6. Load Encoded Data
 
-Index your encoded log events into the data index as usual:
+Index your compact log events into the data index as usual:
 
 ```bash
 curl -X POST 'http://localhost:9200/my-logs/_bulk' \
@@ -120,7 +120,7 @@ curl -X POST 'http://localhost:9200/my-logs/_bulk' \
 
 ### 7. Search
 
-Use L1ES query types to search the decoded content:
+Use L1ES query types to search the expanded content:
 
 ```bash
 # Phrase search
@@ -138,7 +138,7 @@ curl -X POST 'http://localhost:9200/my-logs/_search' \
   }'
 ```
 
-The `fields` parameter is required to trigger the fetch sub-phase that decodes results. The decoded content appears in the `decoded_message` field (or whatever you specified as `dest`).
+The `fields` parameter is required to trigger the fetch sub-phase that decodes results. The expanded content appears in the `decoded_message` field (or whatever you specified as `dest`).
 
 ## Query Types
 
@@ -201,8 +201,8 @@ Parameters: `query` (required), `fields`, `type` (best_fields, most_fields, phra
 | `_l1es` | GET | Plugin info (version, description) |
 | `_l1es/setup` | POST | Create internal indices |
 | `_l1es/cleanup` | POST | Remove internal indices |
-| `_l1es/add-dml-index` | POST | Register encoded field mapping |
-| `_l1es/remove-dml-index` | POST | Unregister encoded field mapping |
+| `_l1es/add-dml-index` | POST | Register compact field mapping |
+| `_l1es/remove-dml-index` | POST | Unregister compact field mapping |
 
 ## Configuration
 
@@ -232,7 +232,7 @@ flags:
 encoder:
   hasEncodedLinePrefix: true         # Encoded lines start with a prefix character
   encodedLinePrefix: "~"             # The prefix character
-  valueSeperator: ","                # Separator between values in encoded lines
+  valueSeperator: ","                # Separator between values in compact lines
 
 dmldb:
   indicesIndexNumberOfShards: 1      # Shards for l1es_dml_indices
@@ -355,12 +355,12 @@ This repository is licensed under the [Apache License 2.0](../LICENSE).
 
 ### Important: Log10x Product License Required
 
-This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-encoded events. While the plugin itself is open source, **using the Log10x Edge Optimizer to encode events requires a commercial license**.
+This repository contains an Elasticsearch/OpenSearch plugin for expanding Log10x compact events. While the plugin itself is open source, **using the Log10x Receiver to compact events requires a commercial license**.
 
 | Component | License |
 |-----------|---------|
 | This repository (Elasticsearch/OpenSearch plugin) | Apache 2.0 (open source) |
-| Log10x Edge Optimizer | Commercial license required |
+| Log10x Receiver | Commercial license required |
 
 **Get Started:**
 - [Log10x Pricing](https://log10x.com/pricing)

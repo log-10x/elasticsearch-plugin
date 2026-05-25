@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/edge/optimizer/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
 
 | | |
 |---|---|
@@ -22,13 +22,13 @@ Log10x compacts log events into two parts:
 L1ES stores the templates in an internal index and, at query time:
 
 1. Matches your search terms against the template patterns
-2. Finds encoded events that use matching templates
+2. Finds compact events that use matching templates
 3. Decodes each result back to the original log line
-4. Returns the decoded content in a field you specify
+4. Returns the expanded content in a field you specify
 
-Standard Elasticsearch queries see only the encoded text and cannot match original content. L1ES bridges this gap in two ways:
+Standard Elasticsearch queries see only the compact text and cannot match original content. L1ES bridges this gap in two ways:
 
-1. **Custom query types** (`l1es_match`, `l1es_match_phrase`, `l1es_multi_match`) — explicit queries for encoded fields
+1. **Custom query types** (`l1es_match`, `l1es_match_phrase`, `l1es_multi_match`) — explicit queries for compact fields
 2. **Transparent query rewriting** — automatically converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents, so Kibana dashboards, saved searches, and KQL queries work without changes
 
 ## Quick Start
@@ -63,7 +63,7 @@ After Elasticsearch starts:
 curl -X POST 'http://localhost:9200/_l1es/setup'
 ```
 
-This creates the internal indices (`l1es_dml` for template storage, `l1es_dml_indices` for field mappings). DML (Data Matching Library) is the internal template lookup engine that maps encoded events back to their original structure.
+This creates the internal indices (`l1es_dml` for template storage, `l1es_dml_indices` for field mappings). DML (Data Matching Library) is the internal template lookup engine that maps compact events back to their original structure.
 
 ### 4. Load Templates
 
@@ -85,7 +85,7 @@ curl -X POST 'http://localhost:9200/_bulk' \
 
 ### 5. Register the Encoded Field
 
-Tell L1ES which index and field contain encoded data:
+Tell L1ES which index and field contain compact data:
 
 ```bash
 curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
@@ -98,12 +98,12 @@ curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
 ```
 
 - `index_name` — your data index
-- `source` — the field containing encoded events
-- `dest` — the field name for decoded output (defaults to `source` if omitted)
+- `source` — the field containing compact events
+- `dest` — the field name for expanded output (defaults to `source` if omitted)
 
 ### 6. Load Encoded Data
 
-Index your encoded log events into the data index as usual:
+Index your compact log events into the data index as usual:
 
 ```bash
 curl -X POST 'http://localhost:9200/my-logs/_bulk' \
@@ -113,7 +113,7 @@ curl -X POST 'http://localhost:9200/my-logs/_bulk' \
 
 ### 7. Search
 
-Use L1ES query types to search the decoded content:
+Use L1ES query types to search the expanded content:
 
 ```bash
 # Phrase search
@@ -131,21 +131,21 @@ curl -X POST 'http://localhost:9200/my-logs/_search' \
   }'
 ```
 
-The `fields` parameter is required to trigger the fetch sub-phase that decodes results. The decoded content appears in the `decoded_message` field (or whatever you specified as `dest`).
+The `fields` parameter is required to trigger the fetch sub-phase that decodes results. The expanded content appears in the `decoded_message` field (or whatever you specified as `dest`).
 
 ## Transparent Kibana Support
 
-L1ES can transparently rewrite standard Elasticsearch queries so that Kibana dashboards, saved searches, and KQL queries work against encoded data without any changes.
+L1ES can transparently rewrite standard Elasticsearch queries so that Kibana dashboards, saved searches, and KQL queries work against compact data without any changes.
 
-When `query_rewrite_enabled` is `true` (the default), L1ES intercepts incoming search requests and converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents. If the target field is not encoded, the query falls back to standard Elasticsearch behavior automatically.
+When `query_rewrite_enabled` is `true` (the default), L1ES intercepts incoming search requests and converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents. If the target field is not compact, the query falls back to standard Elasticsearch behavior automatically.
 
-When `source_decoding_enabled` is `true` (the default), L1ES decodes encoded fields in `_source` for all search responses on registered indices. Kibana document views, Discover, and dashboards display the original log text instead of the encoded `~hash,val1,val2,...` format.
+When `source_decoding_enabled` is `true` (the default), L1ES decodes compact fields in `_source` for all search responses on registered indices. Kibana document views, Discover, and dashboards display the original log text instead of the encoded `~hash,val1,val2,...` format.
 
 Together, these two features mean:
 
-- **Kibana Discover** — searches match original log content; documents display decoded text
+- **Kibana Discover** — searches match original log content; documents display expanded text
 - **Kibana dashboards** — existing visualizations, filters, and saved searches work unchanged
-- **KQL queries** — `message: "error" AND message: "database"` matches against decoded content
+- **KQL queries** — `message: "error" AND message: "database"` matches against expanded content
 - **Alerts** — Kibana alerting rules continue to fire on the original log data
 
 No changes are needed to index mappings, index patterns, Kibana saved objects, or any client application.
@@ -225,8 +225,8 @@ Parameters: `query` (required), `fields`, `type` (best_fields, most_fields, phra
 | `_l1es` | GET | Plugin info (version, description) |
 | `_l1es/setup` | POST | Create internal indices |
 | `_l1es/cleanup` | POST | Remove internal indices |
-| `_l1es/add-dml-index` | POST | Register encoded field mapping |
-| `_l1es/remove-dml-index` | POST | Unregister encoded field mapping |
+| `_l1es/add-dml-index` | POST | Register compact field mapping |
+| `_l1es/remove-dml-index` | POST | Unregister compact field mapping |
 
 ## Configuration
 
@@ -240,12 +240,12 @@ flags:
   match_pharse_query_enabled: true   # Enable l1es_match_phrase
   multi_match_query_enabled: true    # Enable l1es_multi_match
   query_rewrite_enabled: true        # Transparent rewriting of standard queries for Kibana
-  source_decoding_enabled: true      # Decode encoded fields in _source responses
+  source_decoding_enabled: true      # Decode compact fields in _source responses
 
 encoder:
   hasEncodedLinePrefix: true         # Encoded lines start with a prefix character
   encodedLinePrefix: "~"             # The prefix character
-  valueSeperator: ","                # Separator between values in encoded lines
+  valueSeperator: ","                # Separator between values in compact lines
 
 dmldb:
   indicesIndexNumberOfShards: 1      # Shards for l1es_dml_indices
@@ -309,7 +309,7 @@ docker run -d --name l1es -p 9200:9200 \
 │       ├── com/log10x/l1es/
 │       │   ├── analysis/            # Tokenization utilities
 │       │   ├── dml/                 # Template storage and lookup
-│       │   ├── fetch/               # Fetch sub-phase (decode results + _source decoding)
+│       │   ├── fetch/               # Fetch sub-phase (expand results + _source expansion)
 │       │   ├── filter/              # ActionFilter for transparent query rewriting
 │       │   ├── job/                 # Internal ES operations
 │       │   ├── query/               # Custom query types
@@ -344,8 +344,8 @@ The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-1.0.0.
 ## Documentation
 
 - [Log10x Documentation](https://doc.log10x.com)
-- [Edge Optimizer Documentation](https://doc.log10x.com/apps/edge/optimizer/)
-- [Encoding & Decoding](https://doc.log10x.com/run/transform/#encoding)
+- [Receiver Documentation](https://doc.log10x.com/apps/receiver/)
+- [Compact & Expand](https://doc.log10x.com/run/transform/#compact)
 
 ## License
 
@@ -353,17 +353,17 @@ This repository is licensed under the [Apache License 2.0](LICENSE).
 
 ### Important: Log10x Product License Required
 
-This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-encoded events. While the plugin itself is open source, **using the Log10x Edge Optimizer to encode events requires a commercial license**.
+This repository contains an Elasticsearch/OpenSearch plugin for expanding Log10x compact events. While the plugin itself is open source, **using the Log10x Receiver to compact events requires a commercial license**.
 
 | Component | License |
 |-----------|---------|
 | This repository (Elasticsearch/OpenSearch plugin) | Apache 2.0 (open source) |
-| Log10x Edge Optimizer | Commercial license required |
+| Log10x Receiver | Commercial license required |
 
 **What this means:**
 - You can freely use, modify, and distribute this plugin
-- The Log10x Edge Optimizer that generates encoded events requires a paid subscription
-- A valid Log10x license is required to run the Edge Optimizer
+- The Log10x Receiver that generates compact events requires a paid subscription
+- A valid Log10x license is required to run the Receiver
 
 **Get Started:**
 - [Log10x Pricing](https://log10x.com/pricing)

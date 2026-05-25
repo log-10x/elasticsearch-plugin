@@ -8,11 +8,11 @@ This guide covers the full workflow for using L1ES to search Log10x-compacted da
 2. [Installation](#installation)
 3. [Setup](#setup)
 4. [Loading Templates](#loading-templates)
-5. [Registering Encoded Fields](#registering-encoded-fields)
-6. [Loading Encoded Data](#loading-encoded-data)
+5. [Registering Compact Fields](#registering-compact-fields)
+6. [Loading Compact Data](#loading-compact-data)
 7. [Searching](#searching)
 8. [Query Reference](#query-reference)
-9. [Viewing Decoded Results](#viewing-decoded-results)
+9. [Viewing Expanded Results](#viewing-expanded-results)
 10. [Configuration Reference](#configuration-reference)
 11. [Troubleshooting](#troubleshooting)
 
@@ -23,7 +23,7 @@ This guide covers the full workflow for using L1ES to search Log10x-compacted da
 - Elasticsearch 8.17.0
 - Log10x encoder output:
   - `templates.json` — one JSON object per line: `{"templateHash":"<hash>","template":"<pattern>"}`
-  - `encoded.log` — one encoded event per line: `~<hash>,<value1>,<value2>,...`
+  - `encoded.log` — one compact event per line: `~<hash>,<value1>,<value2>,...`
   - The original log file (for verification)
 
 ## Installation
@@ -55,7 +55,7 @@ Expected response:
 ```json
 {
   "name": "l1es-plugin",
-  "description": "L1x support for decoding inside elasticsearch",
+  "description": "L1x support for expanding compact events inside elasticsearch",
   "l1es_version": "1.0.0",
   "elasticsearch_version": "8.17.0"
 }
@@ -84,7 +84,7 @@ curl -s 'http://localhost:9200/_cat/indices/l1es_*?v'
 
 ## Loading Templates
 
-Templates must be loaded into the `l1es_dml` index before encoded data can be searched or decoded. Each template is stored as a document with the template hash as `_id` and the pattern as the `pattern` field.
+Templates must be loaded into the `l1es_dml` index before compact data can be searched or decoded. Each template is stored as a document with the template hash as `_id` and the pattern as the `pattern` field.
 
 ### Using Python (recommended for large template files)
 
@@ -137,9 +137,9 @@ print("Done.")
 curl -s 'http://localhost:9200/l1es_dml/_count' | python3 -m json.tool
 ```
 
-## Registering Encoded Fields
+## Registering Compact Fields
 
-Tell L1ES which index and field contain encoded data:
+Tell L1ES which index and field contain compact data:
 
 ```bash
 curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
@@ -153,9 +153,9 @@ curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `index_name` | Yes | The Elasticsearch index containing encoded data |
-| `source` | Yes | The field name that holds encoded events |
-| `dest` | No | The output field name for decoded results (defaults to `source`) |
+| `index_name` | Yes | The Elasticsearch index containing compact data |
+| `source` | Yes | The field name that holds compact events |
+| `dest` | No | The output field name for expanded results (defaults to `source`) |
 
 ### Remove a Field Mapping
 
@@ -167,15 +167,15 @@ curl -X POST 'http://localhost:9200/_l1es/remove-dml-index' \
   }'
 ```
 
-## Loading Encoded Data
+## Loading Compact Data
 
-Index your encoded events as standard Elasticsearch documents. The encoded text goes into the `source` field you registered above.
+Index your compact events as standard Elasticsearch documents. The compact text goes into the `source` field you registered above.
 
 ### Using Python
 
 ```python
 #!/usr/bin/env python3
-"""Load encoded events into Elasticsearch."""
+"""Load compact events into Elasticsearch."""
 import json
 import urllib.request
 
@@ -191,7 +191,7 @@ with open(ENCODED_FILE, 'r') as f:
         if line:
             lines.append(line)
 
-print(f"Loading {len(lines)} encoded events...")
+print(f"Loading {len(lines)} compact events...")
 
 for batch_start in range(0, len(lines), BATCH_SIZE):
     batch = lines[batch_start:batch_start + BATCH_SIZE]
@@ -239,7 +239,7 @@ curl -X POST 'http://localhost:9200/my-logs/_search' \
   }'
 ```
 
-**Important:** The `fields` parameter must include the source field to trigger the fetch sub-phase that decodes results. Without it, you get hit counts but no decoded content.
+**Important:** The `fields` parameter must include the source field to trigger the fetch sub-phase that expands results. Without it, you get hit counts but no expanded content.
 
 ### Token Search with AND Operator
 
@@ -278,7 +278,7 @@ curl -X POST 'http://localhost:9200/my-logs/_search' \
   }'
 ```
 
-### Count Only (no decoded results needed)
+### Count Only (no expanded results needed)
 
 ```bash
 curl -X POST 'http://localhost:9200/my-logs/_search' \
@@ -299,7 +299,7 @@ curl -X POST 'http://localhost:9200/my-logs/_search' \
 
 ### l1es_match
 
-Splits the query text into tokens and searches for events whose decoded content contains those tokens.
+Splits the query text into tokens and searches for events whose expanded content contains those tokens.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -313,11 +313,11 @@ Splits the query text into tokens and searches for events whose decoded content 
 | `lenient` | `false` | Ignore format-based errors |
 | `zero_terms_query` | `none` | Behavior when analyzer removes all tokens: `none` or `all` |
 
-For multi-token AND queries (2+ tokens), L1ES uses TwoPhaseIterator cross-checking to verify decoded content.
+For multi-token AND queries (2+ tokens), L1ES uses TwoPhaseIterator cross-checking to verify expanded content.
 
 ### l1es_match_phrase
 
-Searches for the exact phrase (tokens in order) in decoded content.
+Searches for the exact phrase (tokens in order) in expanded content.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -338,9 +338,9 @@ Searches across multiple fields.
 | `operator` | `OR` | `AND` or `OR` |
 | All l1es_match parameters | | Same fuzzy/analyzer options as l1es_match |
 
-## Viewing Decoded Results
+## Viewing Expanded Results
 
-When you include `"fields": ["<source_field>"]` in your search request, each hit includes a `fields` object with the decoded content:
+When you include `"fields": ["<source_field>"]` in your search request, each hit includes a `fields` object with the expanded content:
 
 ```json
 {
@@ -362,8 +362,8 @@ When you include `"fields": ["<source_field>"]` in your search request, each hit
 }
 ```
 
-- `_source.message` — the raw encoded event (as stored)
-- `fields.decoded_message` — the decoded original event (expanded by L1ES)
+- `_source.message` — the raw compact event (as stored)
+- `fields.decoded_message` — the expanded original event (expanded by L1ES)
 
 The decoded field name (`decoded_message` in this example) is what you set as `dest` when registering the field mapping.
 
@@ -419,14 +419,14 @@ For large template sets (>10,000), increase `dmlSizeToSearch` to avoid missing m
 
 ### L1ES queries return 0 hits for text that should exist
 
-1. Verify templates are loaded and match your encoded data format.
+1. Verify templates are loaded and match your compact data format.
 2. Check `l1es.yml` encoder settings match your data format (prefix char, separator).
-3. Ensure the encoded events are indexed in the registered index with the registered field name.
+3. Ensure the compact events are indexed in the registered index with the registered field name.
 4. Try a broader search: `l1es_match` with `operator: OR` instead of `l1es_match_phrase`.
 
 ### Decoded output has wrong dates or timestamps
 
-This is a known issue in the log10x-decoder-core library related to timezone handling in date template patterns. The decoded content is structurally correct but timestamps may show timezone offsets. This does not affect search accuracy.
+This is a known issue in the log10x-decoder-core library related to timezone handling in date template patterns. The expanded content is structurally correct but timestamps may show timezone offsets. This does not affect search accuracy.
 
 ### Too many results for common terms
 
