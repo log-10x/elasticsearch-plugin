@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/edge/optimizer/).
+Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
 
 This is the OpenSearch variant of the L1ES plugin. See the [main README](../README.md) for full documentation including Kibana transparent rewriting, the User Guide, and configuration details.
 
@@ -355,12 +355,12 @@ This repository is licensed under the [Apache License 2.0](../LICENSE).
 
 ### Important: Log10x Product License Required
 
-This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-encoded events. While the plugin itself is open source, **using the Log10x Edge Optimizer to encode events requires a commercial license**.
+This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-encoded events. While the plugin itself is open source, **using the Log10x Receiver to encode events requires a commercial license**.
 
 | Component | License |
 |-----------|---------|
 | This repository (Elasticsearch/OpenSearch plugin) | Apache 2.0 (open source) |
-| Log10x Edge Optimizer | Commercial license required |
+| Log10x Receiver | Commercial license required |
 
 **Get Started:**
 - [Log10x Pricing](https://log10x.com/pricing)

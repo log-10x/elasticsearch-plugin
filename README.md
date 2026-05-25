@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/edge/optimizer/).
+Search and query [Log10x-encoded](https://doc.log10x.com/run/transform/#encoding) log data directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently decodes encoded events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
 
 | | |
 |---|---|
@@ -344,7 +344,7 @@ The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-1.0.0.
 ## Documentation
 
 - [Log10x Documentation](https://doc.log10x.com)
-- [Edge Optimizer Documentation](https://doc.log10x.com/apps/edge/optimizer/)
+- [Receiver Documentation](https://doc.log10x.com/apps/receiver/)
 - [Encoding & Decoding](https://doc.log10x.com/run/transform/#encoding)
 
 ## License
@@ -353,17 +353,17 @@ This repository is licensed under the [Apache License 2.0](LICENSE).
 
 ### Important: Log10x Product License Required
 
-This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-encoded events. While the plugin itself is open source, **using the Log10x Edge Optimizer to encode events requires a commercial license**.
+This repository contains an Elasticsearch/OpenSearch plugin for decoding Log10x-encoded events. While the plugin itself is open source, **using the Log10x Receiver to encode events requires a commercial license**.
 
 | Component | License |
 |-----------|---------|
 | This repository (Elasticsearch/OpenSearch plugin) | Apache 2.0 (open source) |
-| Log10x Edge Optimizer | Commercial license required |
+| Log10x Receiver | Commercial license required |
 
 **What this means:**
 - You can freely use, modify, and distribute this plugin
-- The Log10x Edge Optimizer that generates encoded events requires a paid subscription
-- A valid Log10x license is required to run the Edge Optimizer
+- The Log10x Receiver that generates encoded events requires a paid subscription
+- A valid Log10x license is required to run the Receiver
 
 **Get Started:**
 - [Log10x Pricing](https://log10x.com/pricing)
