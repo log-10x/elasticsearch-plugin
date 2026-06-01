@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search, Kibana, and alerting capabilities. On-disk index footprint for typical structured-log workloads (200 to 500 byte bodies) drops by roughly 45 to 55 percent from compact-encode storage alone, and 60 to 70 percent once engine-side envelope pruning is enabled. See [Where the savings come from](#where-the-savings-come-from) for the measured ranges by body size, the encode-mode requirement, and the pruning recipe.
 
 | | |
 |---|---|
@@ -11,6 +11,57 @@ Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x
 | **OpenSearch** | 2.19.0 |
 | **Java** | 17+ |
 | **License** | Apache 2.0 |
+
+## Where the savings come from
+
+The on-disk reduction this plugin enables comes from two mechanisms that compose. The compact encode swaps the original event for a `~<template-hash>,<value1>,<value2>,...` line of the same template; envelope pruning at the engine drops repeated wrapper keys (container IDs, pod IDs, hash labels) before they reach Elasticsearch. The plugin lets Kibana and standard queries see the original content while only the compact form is stored.
+
+### Measured on-disk reduction (Elasticsearch, LZ4 default codec, single shard, force-merged)
+
+| Body size | Compact encode (INNER) | Compact encode + envelope pruning |
+|-----------|------------------------|------------------------------------|
+| Tiny, around 60 bytes | 12 percent | 47 percent |
+| Typical, 200 to 500 bytes | 46 percent | 65 percent |
+| Large, around 1.1 KB | 60 percent | 73 percent |
+
+Reductions grow with body size; tiny logs see less benefit because the encode prefix and value-separator overhead is a larger share of the line. Switching the index to `best_compression` narrows the gap between compact and raw further on the raw side, so the relative reduction on `best_compression` indices is smaller than on default LZ4 indices.
+
+### Encode mode: INNER is required
+
+The Log10x Receiver supports two encode modes. INNER stores the compact line as the raw value of the source field (`message: "~abc123,val1,val2"`); OUTER wraps the compact line inside an outer JSON envelope. **L1ES requires INNER.** The plugin's `L1esPlugin` does not override `getAggregations()`, so Kibana terms aggregations and any other aggregation pipeline read the stored field value directly. Under OUTER, that value is a JSON envelope rather than the expandable compact line, and aggregations bucket on the envelope rather than the original content. INNER keeps the compact line at the field root, where the fetch sub-phase can expand it on read and aggregations remain meaningful.
+
+Configure the Receiver in INNER mode in its pipeline configuration; the plugin then expands on read with no further customer action.
+
+### Engine-side envelope pruning (the extra 15 to 20 points)
+
+The gap between the two columns above is engine-side pruning of high-repeat, low-value envelope keys before the event reaches Elasticsearch. This is applied centrally in the config repo via `drop:` actions in `config/modules/pipelines/run/modules/initialize/k8s/settings.yaml`, hot-reloaded through GitOps. Forwarder-side recipes are not required.
+
+Sample drop list:
+
+```yaml
+# Kubernetes / Docker stamping labels
+drop:
+  - docker.container_id
+  - kubernetes.container_image_id
+  - kubernetes.pod_id
+  - kubernetes.pod_ip
+  - kubernetes.labels.pod-template-hash
+  - kubernetes.labels.opentelemetry.io/name
+
+# 10x internal stamp
+drop:
+  - tenx_tag
+```
+
+These keys are stamped per pod or per build and repeat across every event from the same source; the original values are recoverable from the cluster control plane when forensics are needed. Removing them at the engine takes them out of the inverted index, doc-values, and stored-fields all at once, which is why the pruning delta is larger on Elasticsearch than on column-store backends.
+
+Forwarder-side pruning recipes published earlier are deprecated in favor of this engine-side path.
+
+### Caveats
+
+- Raw bodies in the measurement matrix were synthesized at roughly 2.5x the inner-body length from real structured-log templates. The matrix approximates byte volume; real customer pre-encode text can differ by around 10 percentage points on the absolute numbers.
+- Elasticsearch numbers above are for the default LZ4 codec. Switching the index to `best_compression` raises the raw-side baseline and therefore narrows the relative gap.
+- Encode savings grow with body size. Workloads dominated by very short lines (under 100 bytes) realize less than the typical-row number.
 
 ## How It Works
 
@@ -256,6 +307,10 @@ dmldb:
 ```
 
 The `encoder` section must match the format produced by your Log10x encoder. The defaults above match the standard Log10x output format (`~<hash>,<val1>,<val2>,...`).
+
+### Encode mode (INNER required)
+
+This plugin only supports the Receiver's INNER encode mode. The compact line must be the raw value of the registered source field, not wrapped in an outer JSON envelope. The reason is structural: `L1esPlugin` does not override `getAggregations()`, so any Kibana terms or histogram aggregation reads the stored field value directly. Under OUTER mode the stored value is a JSON envelope rather than the expandable compact line, and aggregations bucket on the envelope, not the original content. Configure the Receiver in INNER mode on the pipeline side; the plugin's fetch sub-phase then handles expansion on read. See [Where the savings come from](#where-the-savings-come-from) for the measured impact.
 
 ## Building from Source
 

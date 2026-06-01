@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search and alerting capabilities. On-disk index footprint for typical structured-log workloads (200 to 500 byte bodies) drops by roughly 45 to 55 percent from compact-encode storage alone, and 60 to 70 percent once engine-side envelope pruning is enabled. See [Where the savings come from](../README.md#where-the-savings-come-from) in the main README for the measured ranges by body size, the encode-mode requirement, and the pruning recipe.
 
 This is the OpenSearch variant of the L1ES plugin. See the [main README](../README.md) for full documentation including Kibana transparent rewriting, the User Guide, and configuration details.
 
@@ -245,6 +245,10 @@ dmldb:
 The `encoder` section must match the format produced by your Log10x encoder. The defaults above match the standard Log10x output format (`~<hash>,<val1>,<val2>,...`).
 
 **Note:** If the config file is missing or unreadable, the plugin falls back to built-in defaults. The built-in defaults for the encoder use `hasEncodedLinePrefix: false` and space-separated values, which do NOT match the standard Log10x output format. Always verify the config file is present.
+
+### Encode mode (INNER required)
+
+This plugin only supports the Receiver's INNER encode mode. The compact line must be the raw value of the registered source field, not wrapped in an outer JSON envelope. The reason is structural: `L1esPlugin` does not override `getAggregations()`, so any OpenSearch Dashboards terms or histogram aggregation reads the stored field value directly. Under OUTER mode the stored value is a JSON envelope rather than the expandable compact line, and aggregations bucket on the envelope, not the original content. Configure the Receiver in INNER mode on the pipeline side; the plugin's fetch sub-phase then handles expansion on read. See [Where the savings come from](../README.md#where-the-savings-come-from) for the measured impact and the engine-side envelope-pruning recipe.
 
 ## Differences from Elasticsearch Variant
 
