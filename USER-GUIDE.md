@@ -423,6 +423,7 @@ For large template sets (>10,000), increase `dmlSizeToSearch` to avoid missing m
 2. Check `l1es.yml` encoder settings match your data format (prefix char, separator).
 3. Ensure the compact events are indexed in the registered index with the registered field name.
 4. Try a broader search: `l1es_match` with `operator: OR` instead of `l1es_match_phrase`.
+5. Confirm the Receiver is running in INNER encode mode. The compact line must be the raw value of the source field; under OUTER mode the field holds a JSON envelope and the fetch sub-phase will not expand cleanly. See the main README section [Where the savings come from](README.md#where-the-savings-come-from) for the structural reason and the configuration knob.
 
 ### Decoded output has wrong dates or timestamps
 
