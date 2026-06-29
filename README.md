@@ -366,7 +366,7 @@ This repository contains an Elasticsearch/OpenSearch plugin for expanding Log10x
 - A valid Log10x license is required to run the Receiver
 
 **Get Started:**
-- [Log10x Pricing](https://log10x.com/pricing)
+- [Log10x Pricing](https://www.log10x.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=footer)
 - [Documentation](https://doc.log10x.com)
 - [Contact Sales](mailto:sales@log10x.com)
 
