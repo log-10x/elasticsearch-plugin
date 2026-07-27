@@ -1,6 +1,6 @@
 # L1ES — OpenSearch Plugin for Log10x
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
 
@@ -11,7 +11,7 @@ This is the OpenSearch variant of the L1ES plugin. See the [main README](../READ
 | **Version** | 1.0.0 |
 | **OpenSearch** | 2.19.0 |
 | **Java** | 17+ |
-| **License** | Apache 2.0 |
+| **License** | MIT |
 
 ## How It Works
 
@@ -351,7 +351,7 @@ The response should include `"l1es": "1.0.0"`. If the endpoint is not found, che
 
 ## License
 
-This repository is licensed under the [Apache License 2.0](../LICENSE).
+This repository is licensed under the [MIT License](../LICENSE).
 
 ### Important: Log10x Product License Required
 
@@ -359,7 +359,7 @@ This repository contains an Elasticsearch/OpenSearch plugin for expanding Log10x
 
 | Component | License |
 |-----------|---------|
-| This repository (Elasticsearch/OpenSearch plugin) | Apache 2.0 (open source) |
+| This repository (Elasticsearch/OpenSearch plugin) | MIT (open source) |
 | Log10x Receiver | Commercial license required |
 
 **Get Started:**
