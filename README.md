@@ -18,13 +18,15 @@ Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x
 
 The on-disk reduction this plugin enables comes from two mechanisms that compose. The compact encode swaps the original event for a `~<template-hash>,<value1>,<value2>,...` line of the same template; envelope pruning at the engine drops repeated wrapper keys (container IDs, pod IDs, hash labels) before they reach Elasticsearch. The plugin lets Kibana and standard queries see the original content while only the compact form is stored.
 
-### Measured on-disk reduction (Elasticsearch, LZ4 default codec, single shard, force-merged)
+### Measured on-disk reduction (Elasticsearch 8.17.0, default LZ4 codec, single shard, force-merged)
 
 | Body size | Compact encode (INNER) | Compact encode + envelope pruning |
 |-----------|------------------------|------------------------------------|
 | Tiny, around 60 bytes | 12 percent | 47 percent |
 | Typical, 200 to 500 bytes | 46 percent | 65 percent |
 | Large, around 1.1 KB | 60 percent | 73 percent |
+
+Every figure in the table is a single measured result for one body-size class, taken from an 18-index measurement matrix run on Elasticsearch 8.17.0 with the default LZ4 codec, a single shard, and each index force-merged before its size was read. Tiny bodies of around 60 bytes measured 12 percent from compact encode and 47 percent with envelope pruning added; typical bodies of 200 to 500 bytes measured 46 percent and 65 percent; large bodies of around 1.1 KB measured 60 percent and 73 percent. No figure here is an average across classes.
 
 Reductions grow with body size; tiny logs see less benefit because the encode prefix and value-separator overhead is a larger share of the line. Switching the index to `best_compression` narrows the gap between compact and raw further on the raw side, so the relative reduction on `best_compression` indices is smaller than on default LZ4 indices.
 
@@ -34,9 +36,9 @@ The Log10x Receiver supports two encode modes. INNER stores the compact line as 
 
 Configure the Receiver in INNER mode in its pipeline configuration; the plugin then expands on read with no further customer action.
 
-### Engine-side envelope pruning (the extra 15 to 20 points)
+### Engine-side envelope pruning
 
-The gap between the two columns above is engine-side pruning of high-repeat, low-value envelope keys before the event reaches Elasticsearch. This is applied centrally in the config repo via `drop:` actions in `config/modules/pipelines/run/modules/initialize/k8s/settings.yaml`, hot-reloaded through GitOps. Forwarder-side recipes are not required.
+The gap between the two columns above is engine-side pruning of high-repeat, low-value envelope keys before the event reaches Elasticsearch. Under the same conditions as the table (Elasticsearch 8.17.0, default LZ4 codec, single shard, force-merged) that gap is 35 points for tiny bodies of around 60 bytes, 19 points for typical bodies of 200 to 500 bytes, and 13 points for large bodies of around 1.1 KB, each one the difference between the two measured columns for that class. This is applied centrally in the config repo via `drop:` actions in `config/modules/pipelines/run/modules/initialize/k8s/settings.yaml`, hot-reloaded through GitOps. Forwarder-side recipes are not required.
 
 Sample drop list:
 
@@ -61,9 +63,9 @@ Forwarder-side pruning recipes published earlier are deprecated in favor of this
 
 ### Caveats
 
-- Raw bodies in the measurement matrix were synthesized at roughly 2.5x the inner-body length from real structured-log templates. The matrix approximates byte volume; real customer pre-encode text can differ by around 10 percentage points on the absolute numbers.
-- Elasticsearch numbers above are for the default LZ4 codec. Switching the index to `best_compression` raises the raw-side baseline and therefore narrows the relative gap.
-- Encode savings grow with body size. Workloads dominated by very short lines (under 100 bytes) realize less than the typical-row number.
+- Raw bodies in the measurement matrix were synthesized at 2.5x the inner-body length from real structured-log templates, so the pre-encode side of every figure above is modeled rather than measured on a live stream. The model is that 2.5x synthesis ratio applied to real structured-log templates. No figure is quoted for how far real pre-encode text moves the absolute numbers, because no run against unsynthesized customer text has been made.
+- Elasticsearch numbers above are for Elasticsearch 8.17.0 on the default LZ4 codec. Switching the index to `best_compression` raises the raw-side baseline and therefore narrows the relative gap.
+- Encode savings grow with body size. Workloads dominated by very short lines land nearer the tiny-class figures of 12 percent and 47 percent than the typical-class 46 percent and 65 percent.
 
 ## How It Works
 
