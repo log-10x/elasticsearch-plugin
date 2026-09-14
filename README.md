@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch with zero data loss. This open-source [Log10x](https://www.log10x.com/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=hero) plugin transparently expands compact events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch with zero data loss. This open-source [Log10x](https://www.log10x.com/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=hero) plugin transparently expands compact events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs](https://doc.log10x.com/apps/receiver/).
 
 > **Blog:** [Cutting Elasticsearch log storage roughly in half without changing queries](https://www.log10x.com/blog/cutting-elasticsearch-log-storage/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=blog). How Elasticsearch stores fewer bytes and still returns the original log lines.
 
