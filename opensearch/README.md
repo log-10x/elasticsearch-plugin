@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs by over 50%](https://doc.log10x.com/apps/receiver/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within OpenSearch with zero data loss. This open-source plugin transparently expands compact events at query time, maintaining full search and alerting capabilities while [reducing storage and licensing costs](https://doc.log10x.com/apps/receiver/).
 
 This is the OpenSearch variant of the L1ES plugin. See the [main README](../README.md) for full documentation including Kibana transparent rewriting, the User Guide, and configuration details.
 
