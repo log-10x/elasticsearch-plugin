@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch with zero data loss. This open-source [Log10x](https://www.log10x.com/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=hero) plugin transparently expands compact events at query time, maintaining full search, Kibana, and alerting capabilities while [reducing storage and licensing costs](https://doc.log10x.com/apps/receiver/).
+Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch. This open-source [Log10x](https://www.log10x.com/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=hero) plugin expands compact events at query time and rewrites standard `match`, `match_phrase` and `multi_match` queries, so searches of those types, from Kibana or any client, match the original log text while the index [stores the smaller compact form](https://doc.log10x.com/apps/receiver/).
 
 > **Blog:** [Cutting Elasticsearch log storage roughly in half without changing queries](https://www.log10x.com/blog/cutting-elasticsearch-log-storage/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=blog). How Elasticsearch stores fewer bytes and still returns the original log lines.
 
@@ -31,7 +31,7 @@ L1ES stores the templates in an internal index and, at query time:
 Standard Elasticsearch queries see only the compact text and cannot match original content. L1ES bridges this gap in two ways:
 
 1. **Custom query types** (`l1es_match`, `l1es_match_phrase`, `l1es_multi_match`) — explicit queries for compact fields
-2. **Transparent query rewriting** — automatically converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents, so Kibana dashboards, saved searches, and KQL queries work without changes
+2. **Transparent query rewriting**: automatically converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents, so Kibana dashboards, saved searches, and KQL queries built on those query types work without changes
 
 ## Quick Start
 
@@ -137,7 +137,7 @@ The `fields` parameter is required to trigger the fetch sub-phase that decodes r
 
 ## Transparent Kibana Support
 
-L1ES can transparently rewrite standard Elasticsearch queries so that Kibana dashboards, saved searches, and KQL queries work against compact data without any changes.
+L1ES can rewrite standard `match`, `match_phrase` and `multi_match` queries so that Kibana dashboards, saved searches, and KQL queries built on those query types work against compact data without changes.
 
 When `query_rewrite_enabled` is `true` (the default), L1ES intercepts incoming search requests and converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents. If the target field is not compact, the query falls back to standard Elasticsearch behavior automatically.
 
@@ -145,12 +145,12 @@ When `source_decoding_enabled` is `true` (the default), L1ES decodes compact fie
 
 Together, these two features mean:
 
-- **Kibana Discover** — searches match original log content; documents display expanded text
-- **Kibana dashboards** — existing visualizations, filters, and saved searches work unchanged
-- **KQL queries** — `message: "error" AND message: "database"` matches against expanded content
-- **Alerts** — Kibana alerting rules continue to fire on the original log data
+- **Kibana Discover**: searches match original log content; documents display expanded text
+- **Kibana dashboards**: visualizations, filters, and saved searches built on those query types work unchanged
+- **KQL queries**: `message: "error" AND message: "database"` matches against expanded content
+- **Alerts**: Kibana alerting rules built on those query types fire on the original log text
 
-No changes are needed to index mappings, index patterns, Kibana saved objects, or any client application.
+For those query types, no changes are needed to index mappings, index patterns, Kibana saved objects, or client applications.
 
 ### Disabling Transparent Rewriting
 
