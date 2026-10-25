@@ -1,8 +1,10 @@
-# L1ES — Elasticsearch Plugin for Log10x
+# L1ES: Elasticsearch Plugin for Log10x
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x events directly within Elasticsearch and OpenSearch. This open-source [Log10x](https://www.log10x.com/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=hero) plugin expands compact events at query time and rewrites standard `match`, `match_phrase` and `multi_match` queries, so searches of those types, from Kibana or any client, match the original log text while the index [stores the smaller compact form](https://doc.log10x.com/apps/receiver/).
+
+L1ES is built for Elasticsearch 8.17.0 and OpenSearch 2.19.0. Elasticsearch 9.3 and later store templates natively with the `pattern_text` field type, and no 9.x build of L1ES exists.
 
 > **Blog:** [Cutting Elasticsearch log storage roughly in half without changing queries](https://www.log10x.com/blog/cutting-elasticsearch-log-storage/?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=blog). How Elasticsearch stores fewer bytes and still returns the original log lines.
 
@@ -18,8 +20,8 @@ Search and query [compact](https://doc.log10x.com/run/transform/#compact) Log10x
 
 Log10x compacts log events into two parts:
 
-1. **Templates** — the recurring structure with `$` placeholders for variable values
-2. **Encoded events** — a compact representation: `~<template-hash>,<value1>,<value2>,...`
+1. **Templates**: the recurring structure, with `$` placeholders for variable values
+2. **Encoded events**: a compact representation in the form `~<template-hash>,<value1>,<value2>,...`
 
 L1ES stores the templates in an internal index and, at query time:
 
@@ -30,12 +32,14 @@ L1ES stores the templates in an internal index and, at query time:
 
 Standard Elasticsearch queries see only the compact text and cannot match original content. L1ES bridges this gap in two ways:
 
-1. **Custom query types** (`l1es_match`, `l1es_match_phrase`, `l1es_multi_match`) — explicit queries for compact fields
+1. **Custom query types** (`l1es_match`, `l1es_match_phrase`, `l1es_multi_match`): explicit queries for compact fields
 2. **Transparent query rewriting**: automatically converts standard `match`, `match_phrase`, and `multi_match` queries to their L1ES equivalents, so Kibana dashboards, saved searches, and KQL queries built on those query types work without changes
 
 ## Quick Start
 
-### 1. Build the Plugin
+### 1. Download or Build the Plugin
+
+The [1.0.0 release](https://github.com/log-10x/elasticsearch-plugin/releases/tag/v1.0.0) carries the two zips: `l1es-plugin-1.0.0.es.8.17.0.zip` for Elasticsearch and `l1es-plugin-1.0.0.os.2.19.0.zip` for OpenSearch. To build from source:
 
 ```bash
 ./gradlew build
@@ -99,9 +103,9 @@ curl -X POST 'http://localhost:9200/_l1es/add-dml-index' \
   }'
 ```
 
-- `index_name` — your data index
-- `source` — the field containing compact events
-- `dest` — the field name for expanded output (defaults to `source` if omitted)
+- `index_name`: your data index
+- `source`: the field containing compact events
+- `dest`: the field name for expanded output (defaults to `source` if omitted)
 
 ### 6. Load Encoded Data
 
@@ -164,7 +168,19 @@ flags:
 
 ### OpenSearch
 
-On OpenSearch, transparent query rewriting uses a search pipeline (`l1es_query_rewrite`) instead of an action filter. The pipeline is automatically created and set as the default search pipeline for the index when you call `_l1es/add-dml-index`. The behavior is otherwise identical.
+On OpenSearch, transparent query rewriting runs as the `l1es_query_rewrite` search request processor in place of an action filter. Create a search pipeline with that processor and set it as the default search pipeline of each registered index:
+
+```bash
+curl -X PUT 'http://localhost:9200/_search/pipeline/l1es_query_rewrite' \
+  -H 'Content-Type: application/json' \
+  -d '{"request_processors": [{"l1es_query_rewrite": {}}]}'
+
+curl -X PUT 'http://localhost:9200/my-logs/_settings' \
+  -H 'Content-Type: application/json' \
+  -d '{"index.search.default_pipeline": "l1es_query_rewrite"}'
+```
+
+The behavior is otherwise identical.
 
 ## Query Types
 
@@ -374,7 +390,7 @@ This repository contains an Elasticsearch/OpenSearch plugin for expanding Log10x
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to the repository.
+Contributions are welcome. Open a pull request against this repository.
 
 ## Support
 
