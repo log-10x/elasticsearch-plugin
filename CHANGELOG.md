@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 (2026-10-25)
+
+- `GET _l1es` on OpenSearch names OpenSearch and its version
+
 ## 1.0.0 (2026-03-20)
 
 - Upgrade `log10x-decoder-core` to 1.0.0

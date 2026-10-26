@@ -10,7 +10,7 @@ L1ES is built for Elasticsearch 8.17.0 and OpenSearch 2.19.0. Elasticsearch 9.3 
 
 | | |
 |---|---|
-| **Version** | 1.0.0 |
+| **Version** | 1.0.1 |
 | **Elasticsearch** | 8.17.0 |
 | **OpenSearch** | 2.19.0 |
 | **Java** | 17+ |
@@ -39,25 +39,25 @@ Standard Elasticsearch queries see only the compact text and cannot match origin
 
 ### 1. Download or Build the Plugin
 
-The [1.0.0 release](https://github.com/log-10x/elasticsearch-plugin/releases/tag/v1.0.0) carries the two zips: `l1es-plugin-1.0.0.es.8.17.0.zip` for Elasticsearch and `l1es-plugin-1.0.0.os.2.19.0.zip` for OpenSearch. To build from source:
+The [1.0.1 release](https://github.com/log-10x/elasticsearch-plugin/releases/tag/v1.0.1) carries the two zips: `l1es-plugin-1.0.1.es.8.17.0.zip` for Elasticsearch and `l1es-plugin-1.0.1.os.2.19.0.zip` for OpenSearch. To build from source:
 
 ```bash
 ./gradlew build
 ```
 
-This produces the plugin zip at `build/distributions/l1es-plugin-1.0.0.es.8.17.0.zip`. See [Building from Source](#building-from-source) for prerequisites and alternative build methods.
+This produces the plugin zip at `build/distributions/l1es-plugin-1.0.1.es.8.17.0.zip`. See [Building from Source](#building-from-source) for prerequisites and alternative build methods.
 
 ### 2. Install the Plugin
 
 ```bash
-bin/elasticsearch-plugin install file:///path/to/l1es-plugin-1.0.0.es.8.17.0.zip
+bin/elasticsearch-plugin install file:///path/to/l1es-plugin-1.0.1.es.8.17.0.zip
 ```
 
 Or with Docker:
 
 ```dockerfile
 FROM docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-COPY l1es-plugin-1.0.0.es.8.17.0.zip /tmp/l1es-plugin.zip
+COPY l1es-plugin-1.0.1.es.8.17.0.zip /tmp/l1es-plugin.zip
 RUN elasticsearch-plugin install --batch file:///tmp/l1es-plugin.zip
 ```
 
@@ -290,7 +290,7 @@ All dependencies (including `log10x-decoder-core`) are resolved automatically fr
 ./gradlew build
 ```
 
-The plugin zip is produced at `build/distributions/l1es-plugin-1.0.0.es.8.17.0.zip`.
+The plugin zip is produced at `build/distributions/l1es-plugin-1.0.1.es.8.17.0.zip`.
 
 ### Build with Docker (if your local Java version is incompatible)
 
@@ -351,13 +351,13 @@ Build the OpenSearch variant:
 ./gradlew :opensearch:build -x test
 ```
 
-The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-1.0.0.os.2.19.0.zip`.
+The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-1.0.1.os.2.19.0.zip`.
 
 ## Compatibility
 
 | L1ES Version | Elasticsearch | OpenSearch | Java | Lucene |
 |-------------|---------------|------------|------|--------|
-| 1.0.0 | 8.17.0 | 2.19.0 | 17+ | 9.12.0 |
+| 1.0.1 | 8.17.0 | 2.19.0 | 17+ | 9.12.0 |
 
 ## Documentation
 
