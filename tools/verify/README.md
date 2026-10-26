@@ -4,9 +4,9 @@ Check that a built L1ES plugin zip actually works against a given Elasticsearch
 or OpenSearch version. Self-contained: you need **Docker, curl and a plugin zip**,
 nothing else (no repo, no Gradle, no JDK).
 
-The two plugin zips are `l1es-plugin-1.0.0.es.8.17.0.zip` and
-`l1es-plugin-1.0.0.os.2.19.0.zip`, attached to the
-[v1.0.0 release](https://github.com/log-10x/elasticsearch-plugin/releases/tag/v1.0.0).
+The two plugin zips are `l1es-plugin-1.0.1.es.8.17.0.zip` and
+`l1es-plugin-1.0.1.os.2.19.0.zip`, attached to the
+[v1.0.1 release](https://github.com/log-10x/elasticsearch-plugin/releases/tag/v1.0.1).
 `./gradlew build` at the repository root writes the same zips to
 `build/distributions/` and `opensearch/build/distributions/`. Each zip installs
 only on the engine version in its name.
@@ -14,8 +14,8 @@ only on the engine version in its name.
 ## Run one version
 
 ```bash
-./verify-l1es.sh es 8.17.0 ./l1es-plugin-1.0.0.es.8.17.0.zip
-./verify-l1es.sh os 2.19.0 ./l1es-plugin-1.0.0.os.2.19.0.zip
+./verify-l1es.sh es 8.17.0 ./l1es-plugin-1.0.1.es.8.17.0.zip
+./verify-l1es.sh os 2.19.0 ./l1es-plugin-1.0.1.os.2.19.0.zip
 ```
 
 ## Sweep several versions

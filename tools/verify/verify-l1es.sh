@@ -8,8 +8,8 @@
 # the plugin, runs the checks below, prints PASS/FAIL, and tears everything down.
 #
 # SINGLE VERSION:
-#   ./verify-l1es.sh es 8.17.0 ./l1es-plugin-1.0.0.es.8.17.0.zip
-#   ./verify-l1es.sh os 2.19.0 ./l1es-plugin-1.0.0.os.2.19.0.zip
+#   ./verify-l1es.sh es 8.17.0 ./l1es-plugin-1.0.1.es.8.17.0.zip
+#   ./verify-l1es.sh os 2.19.0 ./l1es-plugin-1.0.1.os.2.19.0.zip
 #
 # SWEEP (one zip per version, auto-matched from a directory by name *.<es|os>.<ver>.zip):
 #   ./verify-l1es.sh es --versions "8.17.0" --zipdir ./dist
