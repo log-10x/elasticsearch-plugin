@@ -52,7 +52,7 @@ public class InfoHandler extends BaseRestHandler
 			content.startObject("version");
 			content.field("l1es", props.getProperty("l1es.version"));
 			content.field("l1es-snapshot", props.getProperty("l1es.snapshot"));
-			content.field("elasticsearch", props.getProperty("es.version"));
+			content.field(props.getProperty("platform.name"), props.getProperty("platform.version"));
 			content.endObject();
 			
 			content.endObject();

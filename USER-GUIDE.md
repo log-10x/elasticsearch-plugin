@@ -54,10 +54,13 @@ Expected response:
 
 ```json
 {
-  "name": "l1es-plugin",
-  "description": "L1x support for expanding compact events inside elasticsearch",
-  "l1es_version": "1.0.0",
-  "elasticsearch_version": "8.17.0"
+    "name": "l1es-plugin",
+    "description": "Log10x support for searching and decoding encoded data in Elasticsearch",
+    "version": {
+        "l1es": "1.0.0",
+        "l1es-snapshot": "1.0.0.es.8.17.0",
+        "elasticsearch": "8.17.0"
+    }
 }
 ```
 
