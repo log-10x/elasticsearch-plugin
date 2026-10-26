@@ -1,8 +1,8 @@
 # L1ES version verifier
 
 Check that a built L1ES plugin zip actually works against a given Elasticsearch
-or OpenSearch version. Self-contained: you need **Docker + a plugin zip**, nothing
-else (no repo, no gradle, no JDK, nothing hosted).
+or OpenSearch version. Self-contained: you need **Docker, curl and a plugin zip**,
+nothing else (no repo, no Gradle, no JDK).
 
 The two plugin zips are `l1es-plugin-1.0.0.es.8.17.0.zip` and
 `l1es-plugin-1.0.0.os.2.19.0.zip`, attached to the
@@ -37,14 +37,16 @@ checks below, prints PASS/FAIL, and tears everything down. Exit code is 0 only
 if every version passed.
 
 Flags: `--keep` (single run only; leave the node up to poke at), `--no-decode`
-(skip the roundtrip), `--fixtures DIR` (point at a different fixture set).
+(skip the roundtrip), `--fixtures DIR` (point at a different fixture set),
+`--port N` (host port for the node, default 9299; the run stops if something
+already answers on that port).
 
-## What it checks — and what a failure means
+## What it checks and what a failure means
 
 | Check | What it proves | A failure means |
 |-------|----------------|-----------------|
-| install | the plugin's classes load on this engine | an internal API the plugin uses was removed/changed on this version (e.g. the Lucene 10 scorer change), or the zip targets a different version |
-| startup | the node stays up with the plugin on | a load-time break (e.g. the Elasticsearch 9 entitlements change) |
+| install | the plugin's classes load on this engine | an internal API the plugin uses was removed or changed on this version, or the zip targets a different version |
+| startup | the node stays up with the plugin on | a load-time break |
 | registered | `_cat/plugins` lists it | the plugin didn't register |
 | endpoint | `GET /_l1es` answers | the REST/action wiring didn't load |
 | search | a plain match query runs | the query path crashes |
@@ -59,16 +61,9 @@ that engine version, not just that it loads.
 
 ## Fixtures
 
-`fixtures/` is carved from the real 200MB OpenTelemetry sample (6 template/event
-pairs, ~10KB).
+`fixtures/` holds 6 template and event pairs (about 10 KB) taken from the 200 MB
+OpenTelemetry sample.
 
-- `dml-bulk.ndjson` — templates, ready to POST to `l1es_dml/_bulk`
-- `docs-bulk.ndjson` — encoded events, ready to POST to the target index
-- `meta.env` — index name, query phrase, and the decode-proof token
-
-## Using it as an early-warning check
-
-Run it against a new engine release the day it ships (`./verify-l1es.sh es 9.2.0 …`).
-If `install` or `decode` fails, that release broke an API the plugin depends on,
-and you'll see exactly which. Drop the same call into a scheduled GitHub Action
-if you ever want it automated, but nothing here requires that.
+- `dml-bulk.ndjson`: templates, ready to POST to `l1es_dml/_bulk`
+- `docs-bulk.ndjson`: encoded events, ready to POST to the target index
+- `meta.env`: index name, query phrase, and the decode-proof token

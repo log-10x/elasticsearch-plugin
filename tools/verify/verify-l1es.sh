@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# verify-l1es.sh — check that a built L1ES plugin zip works against one or more
+# verify-l1es.sh: check that a built L1ES plugin zip works against one or more
 #                  Elasticsearch / OpenSearch versions.
 #
-# No repo, no gradle, no JDK, nothing hosted. You need: Docker + a plugin zip.
+# No repo, no Gradle, no JDK. You need: Docker, curl and a plugin zip.
 # For each version it boots that exact engine in a throwaway container, installs
 # the plugin, runs the checks below, prints PASS/FAIL, and tears everything down.
 #
@@ -16,13 +16,14 @@
 #
 # FLAGS: --keep (single only; leave node up)  --no-decode (skip roundtrip)
 #        --fixtures DIR (default: <script>/fixtures)
+#        --port N (host port for the node, default 9299)
 #
 # EXIT: 0 = every version passed, non-zero = at least one check failed.
 #
 # CHECKS per version (a failure names what broke):
-#   install     plugin classes load on this engine (a removed internal API — e.g.
-#               the Lucene 10 scorer change — or a descriptor version mismatch)
-#   startup     node stays up with the plugin (e.g. the ES 9 entitlements change)
+#   install     plugin classes load on this engine (a removed internal API or a
+#               descriptor version mismatch)
+#   startup     node stays up with the plugin
 #   registered  _cat/plugins lists l1es-plugin
 #   endpoint    GET /_l1es answers (REST + action wiring)
 #   search      a plain match query runs (query path intact)
@@ -33,7 +34,7 @@ set -uo pipefail
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 FIXDIR="${SELF_DIR}/fixtures"
-KEEP=""; DECODE=1; ZIPDIR=""; VERSIONS=(); POS=()
+KEEP=""; DECODE=1; ZIPDIR=""; PORT=9299; VERSIONS=(); POS=()
 
 PRODUCT="${1:-}"; shift 1 2>/dev/null || true
 while [[ $# -gt 0 ]]; do
@@ -41,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --versions) shift; read -r -a VERSIONS <<< "${1:-}" ;;
     --zipdir)   shift; ZIPDIR="${1:-}" ;;
     --fixtures) shift; FIXDIR="${1:-}" ;;
+    --port)     shift; PORT="${1:-}" ;;
     --keep)     KEEP=1 ;;
     --no-decode) DECODE=0 ;;
     --*) echo "!! unknown flag: $1"; exit 2 ;;
@@ -60,12 +62,17 @@ esac
 command -v docker >/dev/null || { echo "!! docker is required"; exit 2; }
 command -v curl   >/dev/null || { echo "!! curl is required"; exit 2; }
 
-ES=http://localhost:9200
+ES="http://localhost:${PORT}"
 CT_JSON='-H Content-Type:application/json'
 CT_NDJSON='-H Content-Type:application/x-ndjson'
 
-# Backstop: remove any stray verify containers/images on exit.
-cleanup_all() { docker ps -aq --filter "name=l1es-verify-" | xargs -r docker rm -f >/dev/null 2>&1 || true; }
+# Backstop: remove this run's container and image if the run is interrupted.
+CUR_NAME=""; CUR_TAG=""
+cleanup_all() {
+  [[ -n "$CUR_NAME" ]] && docker rm -f "$CUR_NAME" >/dev/null 2>&1
+  [[ -n "$CUR_TAG" ]] && docker rmi "$CUR_TAG" >/dev/null 2>&1
+  true
+}
 trap cleanup_all EXIT
 
 # verify_one <version> <zip> <allow_keep> -> prints checks, returns 0 (pass) / 1 (fail)
@@ -80,6 +87,7 @@ verify_one() {
   pass() { echo "  PASS  $1"; P=$((P+1)); }
   fail() { echo "  FAIL  $1"; F=$((F+1)); }
   local keep_this=""; [[ -n "$KEEP" && "$ALLOW_KEEP" == "1" ]] && keep_this=1
+  CUR_NAME="$NAME"; CUR_TAG="$TAG"
 
   local_cleanup() {
     if [[ -n "$keep_this" ]]; then
@@ -88,6 +96,7 @@ verify_one() {
       docker rm -f "$NAME" >/dev/null 2>&1 || true
       docker rmi "$TAG"    >/dev/null 2>&1 || true
     fi
+    CUR_NAME=""; CUR_TAG=""
     rm -rf "$CTX"
   }
 
@@ -98,7 +107,7 @@ verify_one() {
   if command -v unzip >/dev/null; then
     local dv; dv="$(unzip -p "$ZIP" plugin-descriptor.properties 2>/dev/null | grep "^${DESC_KEY}=" | cut -d= -f2 | tr -d '\r')"
     if [[ -n "$dv" && "$dv" != "$VERSION" ]]; then
-      echo "!! WARNING: zip descriptor ${DESC_KEY}=${dv}, testing ${VERSION} — install will fail on mismatch."
+      echo "!! WARNING: zip descriptor ${DESC_KEY}=${dv}, testing ${VERSION}; install will fail on mismatch."
     fi
   fi
 
@@ -110,7 +119,7 @@ verify_one() {
   if docker build -t "$TAG" "$CTX" > "$CTX/build.log" 2>&1; then
     pass "install (plugin loaded its classes on $PRODUCT $VERSION)"
   else
-    fail "install — plugin will not load on $PRODUCT $VERSION"
+    fail "install: plugin will not load on $PRODUCT $VERSION"
     echo "   ---- install error (last 20 lines) ----"; tail -20 "$CTX/build.log" | sed 's/^/   /'
     local_cleanup; echo "-- $PRODUCT $VERSION: $P passed, $F failed"; return 1
   fi
@@ -126,7 +135,14 @@ verify_one() {
           -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Str0ng-Passw0rd!" \
           -e "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m")
   fi
-  docker run -d --name "$NAME" -p 9200:9200 "${ENVS[@]}" "$TAG" >/dev/null
+  if curl -s -o /dev/null "${ES}" 2>/dev/null; then
+    fail "startup: something already answers on port ${PORT}; free it or pass --port"
+    local_cleanup; echo "-- $PRODUCT $VERSION: $P passed, $F failed"; return 1
+  fi
+  if ! docker run -d --name "$NAME" -p "${PORT}:9200" "${ENVS[@]}" "$TAG" >/dev/null; then
+    fail "startup: docker run failed"
+    local_cleanup; echo "-- $PRODUCT $VERSION: $P passed, $F failed"; return 1
+  fi
   echo "-- waiting for node to become healthy ..."
   local up=""
   for _ in $(seq 1 60); do
@@ -137,7 +153,7 @@ verify_one() {
   if [[ -n "$up" ]]; then
     pass "startup (node healthy with plugin installed)"
   else
-    fail "startup — node did not come up (load-time failure)"
+    fail "startup: node did not come up (load-time failure)"
     echo "   ---- node log (last 25 lines) ----"; docker logs "$NAME" 2>&1 | tail -25 | sed 's/^/   /'
     local_cleanup; echo "-- $PRODUCT $VERSION: $P passed, $F failed"; return 1
   fi
@@ -194,8 +210,8 @@ if [[ ${#VERSIONS[@]} -eq 0 ]]; then
   VER="${POS[0]:-}"; ZIP="${POS[1]:-}"
   [[ -n "$VER" && -n "$ZIP" ]] || { usage; exit 2; }
   verify_one "$VER" "$ZIP" 1 || overall=1
-  [[ $overall -eq 0 ]] && echo "RESULT: PASS — L1ES works on $PRODUCT $VER" \
-                       || echo "RESULT: FAIL — see above"
+  [[ $overall -eq 0 ]] && echo "RESULT: PASS, L1ES works on $PRODUCT $VER" \
+                       || echo "RESULT: FAIL, see above"
 else
   # sweep
   [[ -n "$ZIPDIR" ]] || { echo "!! --versions requires --zipdir DIR (one zip per version)"; exit 2; }
