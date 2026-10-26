@@ -12,7 +12,7 @@
 #   ./verify-l1es.sh os 2.19.0 ./l1es-plugin-1.0.0.os.2.19.0.zip
 #
 # SWEEP (one zip per version, auto-matched from a directory by name *.<es|os>.<ver>.zip):
-#   ./verify-l1es.sh es --versions "8.17.0 8.19.0 9.0.0" --zipdir ./dist
+#   ./verify-l1es.sh es --versions "8.17.0" --zipdir ./dist
 #
 # FLAGS: --keep (single only; leave node up)  --no-decode (skip roundtrip)
 #        --fixtures DIR (default: <script>/fixtures)

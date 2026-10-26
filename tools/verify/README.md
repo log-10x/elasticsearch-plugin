@@ -4,21 +4,31 @@ Check that a built L1ES plugin zip actually works against a given Elasticsearch
 or OpenSearch version. Self-contained: you need **Docker + a plugin zip**, nothing
 else (no repo, no gradle, no JDK, nothing hosted).
 
+The two plugin zips are `l1es-plugin-1.0.0.es.8.17.0.zip` and
+`l1es-plugin-1.0.0.os.2.19.0.zip`, attached to the
+[v1.0.0 release](https://github.com/log-10x/elasticsearch-plugin/releases/tag/v1.0.0).
+`./gradlew build` at the repository root writes the same zips to
+`build/distributions/` and `opensearch/build/distributions/`. Each zip installs
+only on the engine version in its name.
+
 ## Run one version
 
 ```bash
 ./verify-l1es.sh es 8.17.0 ./l1es-plugin-1.0.0.es.8.17.0.zip
 ./verify-l1es.sh os 2.19.0 ./l1es-plugin-1.0.0.os.2.19.0.zip
-./verify-l1es.sh es 9.0.0  ./l1es-plugin.zip            # a version you're not sure about yet
 ```
 
 ## Sweep several versions
 
-One zip per version, auto-matched from a directory by filename (`*.<es|os>.<ver>.zip`):
+One zip per version, auto-matched from a directory by filename (`*.<es|os>.<ver>.zip`).
+With both release zips in `./dist`:
 
 ```bash
-./verify-l1es.sh es --versions "8.17.0 8.19.0 9.0.0" --zipdir ./dist
+./verify-l1es.sh es --versions "8.17.0" --zipdir ./dist
+./verify-l1es.sh os --versions "2.19.0" --zipdir ./dist
 ```
+
+A version with no matching zip in the directory fails as `FAIL (no zip)`.
 
 Prints a per-version PASS/FAIL summary at the end and exits non-zero if any failed.
 
@@ -50,8 +60,7 @@ that engine version, not just that it loads.
 ## Fixtures
 
 `fixtures/` is carved from the real 200MB OpenTelemetry sample (6 template/event
-pairs, ~10KB). To regenerate or grow it, re-run the extraction against
-`config/data/sample/output/{templates.json,encoded.log}`.
+pairs, ~10KB).
 
 - `dml-bulk.ndjson` — templates, ready to POST to `l1es_dml/_bulk`
 - `docs-bulk.ndjson` — encoded events, ready to POST to the target index
