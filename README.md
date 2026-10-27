@@ -369,19 +369,14 @@ The plugin zip is produced at `opensearch/build/distributions/l1es-plugin-1.0.1.
 
 This repository is licensed under the [MIT License](LICENSE).
 
-### Important: Log10x Product License Required
+### The Receiver that writes compact events
 
-This repository contains an Elasticsearch/OpenSearch plugin for expanding Log10x compact events. While the plugin itself is open source, **using the Log10x Receiver to compact events requires a commercial license**.
+This repository holds the Elasticsearch/OpenSearch plugin that expands Log10x compact events at search time. The Log10x Receiver, which writes them, is not in this repository; it runs on the built-in Free tier on up to 10 nodes, with no licence token, and a commercial licence lifts the node count.
 
 | Component | License |
 |-----------|---------|
 | This repository (Elasticsearch/OpenSearch plugin) | MIT (open source) |
-| Log10x Receiver | Commercial license required |
-
-**What this means:**
-- You can freely use, modify, and distribute this plugin
-- The Log10x Receiver that generates compact events requires a paid subscription
-- A valid Log10x license is required to run the Receiver
+| Log10x Receiver | Free tier on up to 10 nodes; commercial licence above that |
 
 **Get Started:**
 - [Log10x Pricing](https://www.log10x.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=elasticsearch-plugin&utm_content=footer)
