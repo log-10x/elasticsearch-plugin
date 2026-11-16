@@ -219,11 +219,12 @@ INDEX = "my-logs"
 BATCH_SIZE = 1000
 
 lines = []
-with open(ENCODED_FILE, 'r') as f:
+# Encoded lines end at LF only: a value can hold a CR, so do not let Python
+# split lines at CR (newline="\n"), and strip only the LF: a template hash can
+# end with a space, and an event whose template has no value is the hash alone.
+with open(ENCODED_FILE, 'r', encoding='utf-8', newline='\n') as f:
     for i, line in enumerate(f):
-        # Strip the line break only: a template hash can end with a space, and an
-        # event whose template has no value is written as the hash alone.
-        line = line.rstrip("\r\n")
+        line = line.rstrip("\n")
         if line:
             lines.append(line)
 
