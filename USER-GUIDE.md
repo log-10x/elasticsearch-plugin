@@ -174,6 +174,37 @@ curl -X POST 'http://localhost:9200/_l1es/remove-dml-index' \
 
 Index your compact events as standard Elasticsearch documents. The compact text goes into the `source` field you registered above.
 
+### Map the Compact Field
+
+Values in a compact event are separated by `,`, and the standard analyzer reads two numbers joined by a comma as one term: `10.0.1.14,443` is one term, not `10.0.1.14` and `443`. Create the index with an analyzer that turns `,` into a space before it splits words, so each value is a term of its own and a search for a value, such as an IPv4 address the engine writes as one value, finds it in the compact event:
+
+```bash
+curl -X PUT 'http://localhost:9200/my-logs' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "settings": {
+      "analysis": {
+        "char_filter": {
+          "l1x_value_separator": { "type": "pattern_replace", "pattern": ",", "replacement": " " }
+        },
+        "analyzer": {
+          "l1x_compact": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "char_filter": ["l1x_value_separator"],
+            "filter": ["lowercase"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "properties": {
+        "message": { "type": "text", "analyzer": "l1x_compact" }
+      }
+    }
+  }'
+```
+
 ### Using Python
 
 ```python
@@ -190,7 +221,9 @@ BATCH_SIZE = 1000
 lines = []
 with open(ENCODED_FILE, 'r') as f:
     for i, line in enumerate(f):
-        line = line.strip()
+        # Strip the line break only: a template hash can end with a space, and an
+        # event whose template has no value is written as the hash alone.
+        line = line.rstrip("\r\n")
         if line:
             lines.append(line)
 
