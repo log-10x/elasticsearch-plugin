@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.Strings;
 
+import com.log10x.l1es.analysis.AnalysisUtil;
 import com.log10x.l1es.analysis.AnalyzerTokenizer;
 import com.log10x.l1es.query.match.query.L1esMatchQuery;
 import com.log10x.l1es.query.wrap.L1esScorerWrapper;
@@ -217,7 +218,10 @@ public class PhrasePredicate implements Predicate<String> {
 	 * zero or more tokens of {@link #targets}, and the phrase may start or end inside
 	 * such a run. Returns true when the targets can be laid on a contiguous stretch
 	 * of {@code tokens} this way, with at least one target matched by a token that
-	 * is not a wild card unless {@code allowFullWildcardMatch}.
+	 * is not a wild card unless {@code allowFullWildcardMatch}. A token of
+	 * {@link AnalysisUtil#tokenizePatternWithEdges} marked open on a side matches
+	 * a target it is only the start, end or a part of
+	 * ({@link AnalysisUtil#tokenMatches}).
 	 *
 	 * Runs over the pattern once per target: O(tokens x targets).
 	 */
@@ -256,7 +260,7 @@ public class PhrasePredicate implements Predicate<String> {
 						// the value's run takes this target and may take more
 						next[i][s] = true;
 						any = true;
-					} else if (pattern[i].equals(target)) {
+					} else if (AnalysisUtil.tokenMatches(pattern[i], target)) {
 						next[i + 1][1] = true;
 						any = true;
 					}
