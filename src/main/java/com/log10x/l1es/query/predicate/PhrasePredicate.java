@@ -75,10 +75,11 @@ public class PhrasePredicate implements Predicate<String> {
 	 * 
 	 * @param tokens                 the {@link List} of tokens to test.
 	 * 
-	 * @param allowVariableWildcard  When set to {@code true}, will treat
+	 * @param allowVariableWildcard  When set to {@code true}, will treat each
 	 *                               {@link L1esConsts#VARIABLE_TOKEN} in
-	 *                               {@code tokens} as wild cards that can match any
-	 *                               token in {@link #targets}
+	 *                               {@code tokens} as a wild card for a run of zero
+	 *                               or more tokens of {@link #targets} (see
+	 *                               {@link #testWithVariables})
 	 * 
 	 * @param allowFullWildcardMatch When set to {@code false}, at least one of the
 	 *                               tokens in {@code tokens} need to match without
@@ -90,6 +91,10 @@ public class PhrasePredicate implements Predicate<String> {
 	public boolean test(List<String> tokens, boolean allowVariableWildcard, boolean allowFullWildcardMatch) {
 		if (targets.isEmpty()) {
 			return false;
+		}
+
+		if (allowVariableWildcard) {
+			return testWithVariables(tokens, allowFullWildcardMatch);
 		}
 
 		int targetsSize = targets.size();
@@ -196,6 +201,86 @@ public class PhrasePredicate implements Predicate<String> {
 				for (int j = 0; j < targetsSize; j++) {
 					tokensIterator.previous();
 				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * The wild card form of {@link #test(List, boolean, boolean)}. One value of a
+	 * compact event can hold several analyzed tokens: the encoder writes an IPv4
+	 * address or a Windows path as one value when its {@code ipv4SingleToken} or
+	 * {@code windowsPathSingleToken} option is on (`C:\Program Files\App\app.exe`
+	 * analyzes to five tokens), and an analyzer splits some single values
+	 * (`PROGRA~1`). So each {@link L1esConsts#VARIABLE_TOKEN} stands for a run of
+	 * zero or more tokens of {@link #targets}, and the phrase may start or end inside
+	 * such a run. Returns true when the targets can be laid on a contiguous stretch
+	 * of {@code tokens} this way, with at least one target matched by a token that
+	 * is not a wild card unless {@code allowFullWildcardMatch}.
+	 *
+	 * Runs over the pattern once per target: O(tokens x targets).
+	 */
+	private boolean testWithVariables(List<String> tokens, boolean allowFullWildcardMatch) {
+		int size = tokens.size();
+		int targetsSize = targets.size();
+
+		String[] pattern = tokens.toArray(new String[size]);
+		boolean[] isVariable = new boolean[size];
+
+		for (int i = 0; i < size; i++) {
+			isVariable[i] = L1esConsts.VARIABLE_TOKEN.equals(pattern[i]);
+		}
+
+		// reach[i][s]: the targets matched so far end with the pattern at position i,
+		// s = 1 once one of them was matched by a token that is not a wild card. A
+		// stretch may start at any position.
+		boolean[][] reach = new boolean[size + 1][2];
+
+		for (int i = 0; i <= size; i++) {
+			reach[i][0] = true;
+		}
+
+		for (int t = 0; t < targetsSize; t++) {
+			String target = targets.get(t);
+			boolean[][] next = new boolean[size + 1][2];
+			boolean any = false;
+
+			for (int i = 0; i < size; i++) {
+				for (int s = 0; s < 2; s++) {
+					if (!reach[i][s]) {
+						continue;
+					}
+
+					if (isVariable[i]) {
+						// the value's run takes this target and may take more
+						next[i][s] = true;
+						any = true;
+					} else if (pattern[i].equals(target)) {
+						next[i + 1][1] = true;
+						any = true;
+					}
+				}
+			}
+
+			if (!any) {
+				return false;
+			}
+
+			// a run may end anywhere: from a wild card, go on past it
+			for (int i = 0; i < size; i++) {
+				if (isVariable[i]) {
+					next[i + 1][0] |= next[i][0];
+					next[i + 1][1] |= next[i][1];
+				}
+			}
+
+			reach = next;
+		}
+
+		for (int i = 0; i <= size; i++) {
+			if (reach[i][1] || (allowFullWildcardMatch && reach[i][0])) {
+				return true;
 			}
 		}
 
