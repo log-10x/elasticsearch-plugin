@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.2 (unreleased)
+## 1.0.2 (2026-11-17)
 
 - Upgrade `log10x-decoder-core` to 1.0.1: a value slot right before a CR decodes, so Windows events that keep the CR of a CR LF expand to their original text
 - Upgrade `log10x-decoder-core` to 1.0.1: an epoch timestamp with a fraction expands as written, with its dot and zeros: milliseconds (`1705313472123.456`) and seconds (`1723042099.699`, as in Linux audit records)
