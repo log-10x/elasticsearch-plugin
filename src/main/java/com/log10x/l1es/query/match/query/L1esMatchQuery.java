@@ -274,15 +274,6 @@ public class L1esMatchQuery extends MatchQueryParser {
 			// AND intersection: templates with ALL query tokens in static parts.
 			Set<String> andHashes = findAndMatchingHashes(originalValueTokens, snap);
 
-			// Check if all query tokens exist in the DML index.
-			boolean allTokensInIndex = true;
-			for (String token : originalValueTokens) {
-				if (!snap.tokenIndex.containsKey(token)) {
-					allTokensInIndex = false;
-					break;
-				}
-			}
-
 			// Classify AND candidates using bigram index for MUST, PhrasePredicate for MIGHT.
 			mustMatchHashes = findBigramMustHashes(originalValueTokens, andHashes, snap);
 
@@ -321,23 +312,19 @@ public class L1esMatchQuery extends MatchQueryParser {
 						queryTokenSet, phraseClassMap, crossChecker);
 			}
 
-			if (!allTokensInIndex) {
-				// Some tokens not in index — need catch-all for correctness.
-				templateMustMatch = createLazyTwoPassPhraseClassification(analyzerTokenizer, crossChecker);
-				for (String hash : mustMatchHashes) {
-					templateMustMatch.put(hash, Boolean.TRUE);
-				}
-				for (String hash : andHashes) {
-					if (!mustMatchHashes.contains(hash)) {
-						templateMustMatch.put(hash, Boolean.FALSE);
-					}
-				}
-
-				Query variablesPhraseQuery = super.parse(Type.PHRASE, fieldName, value);
-				Query wrappedCatchAll = L1esQueryWrapper.wrap(variablesPhraseQuery, fieldName, dmlDB,
-						crossChecker, templateMustMatch, L1esConsts.L1X_TID_FIELD);
-				builder.add(new BooleanClause(wrappedCatchAll, BooleanClause.Occur.SHOULD));
+			// Catch-all: documents whose compact text itself holds the phrase, that is
+			// the phrase inside values. It is needed whether or not every query token
+			// also appears in some template's static text: a value can hold the same
+			// words (a Windows path or an IPv4 address written as one value).
+			templateMustMatch = createLazyTwoPassPhraseClassification(analyzerTokenizer, crossChecker);
+			for (String hash : mustMatchHashes) {
+				templateMustMatch.put(hash, Boolean.TRUE);
 			}
+
+			Query variablesPhraseQuery = super.parse(Type.PHRASE, fieldName, value);
+			Query wrappedCatchAll = L1esQueryWrapper.wrap(variablesPhraseQuery, fieldName, dmlDB,
+					crossChecker, templateMustMatch, L1esConsts.L1X_TID_FIELD);
+			builder.add(new BooleanClause(wrappedCatchAll, BooleanClause.Occur.SHOULD));
 		} else {
 			// Path B: phrase search + OR search + filtering.
 			List<String> exactPhraseDmlHashes = new ArrayList<>();
@@ -961,11 +948,12 @@ public class L1esMatchQuery extends MatchQueryParser {
 	 * If the phrase appears entirely in the template's static parts (in order),
 	 * the template is MUST_MATCH ({@code Boolean.TRUE}).
 	 *
-	 * <p>Pass 2: wildcard phrase check ({@code allowVariableWildcard=true}).
-	 * If the phrase matches when VARIABLE_TOKEN is treated as a wildcard,
-	 * the template is MIGHT_MATCH ({@code null}).
+	 * <p>Pass 2: a template with a value slot is MIGHT_MATCH ({@code null}). The map
+	 * serves the catch-all, whose documents hold the phrase in their compact text,
+	 * that is in their values, so their decoded text is checked.
 	 *
-	 * <p>If both checks fail, the template is CANNOT_MATCH ({@code Boolean.FALSE}).
+	 * <p>A template with no value slot that fails pass 1 is CANNOT_MATCH
+	 * ({@code Boolean.FALSE}).
 	 */
 	private Map<String, Boolean> createLazyTwoPassPhraseClassification(AnalyzerTokenizer analyzerTokenizer,
 			PhrasePredicate phrasePredicate) {
@@ -994,8 +982,10 @@ public class L1esMatchQuery extends MatchQueryParser {
 					return Boolean.TRUE;
 				}
 
-				// Pass 2: wildcard — phrase could span variable boundaries.
-				if (phrasePredicate.test(patternTokens, true, false)) {
+				// Pass 2: a template with a value slot. The catch-all only reaches
+				// documents whose compact text holds the phrase, so the phrase is in
+				// their values: decode and check.
+				if (patternTokens.contains(L1esConsts.VARIABLE_TOKEN)) {
 					return null; // MIGHT_MATCH
 				}
 
@@ -1055,8 +1045,10 @@ public class L1esMatchQuery extends MatchQueryParser {
 	}
 
 	/**
-	 * Classifies templates for phrase queries. A template MUST_MATCH if the
-	 * target phrase appears entirely in its static (non-variable) parts.
+	 * Classifies templates for phrase queries: {@code Boolean.TRUE} (MUST_MATCH)
+	 * when the phrase appears entirely in the template's static parts, not in the
+	 * map (MIGHT_MATCH, decoded and checked) when it can lie partly or wholly in
+	 * the template's values, {@code Boolean.FALSE} (CANNOT_MATCH) otherwise.
 	 */
 	private Map<String, Boolean> classifyPhraseTemplates(Collection<String> dmlHashes,
 			AnalyzerTokenizer analyzerTokenizer, PhrasePredicate phrasePredicate) {
@@ -1070,7 +1062,13 @@ public class L1esMatchQuery extends MatchQueryParser {
 			}
 
 			List<String> patternTokens = tokenizePatternCached(hash, pattern, analyzerTokenizer);
-			result.put(hash, phrasePredicate.test(patternTokens, false, false));
+
+			if (phrasePredicate.test(patternTokens, false, false)) {
+				result.put(hash, Boolean.TRUE);
+			} else if (!phrasePredicate.test(patternTokens, true, true)) {
+				result.put(hash, Boolean.FALSE);
+			}
+			// else: MIGHT_MATCH, not in the map
 		}
 
 		return result;
