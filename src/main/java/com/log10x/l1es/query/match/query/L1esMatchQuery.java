@@ -24,6 +24,7 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.search.TermQuery;
@@ -37,6 +38,8 @@ import org.elasticsearch.index.search.MatchQueryParser;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+
+import org.elasticsearch.plugin.log10x.L1esConfig;
 
 import com.log10x.l1es.analysis.AnalysisUtil;
 import com.log10x.l1es.analysis.AnalyzerTokenizer;
@@ -69,6 +72,13 @@ public class L1esMatchQuery extends MatchQueryParser {
 	 * and lock contention. Cleared on DML index rebuild.
 	 */
 	private static final ConcurrentHashMap<String, List<String>> tokenizedPatternCache = new ConcurrentHashMap<>();
+
+	/**
+	 * Per-template tokens with open edges marked
+	 * ({@link AnalysisUtil#tokenizePatternWithEdges}), for the wild card form of
+	 * a phrase test. Evicted as {@link #tokenizedPatternCache}.
+	 */
+	private static final ConcurrentHashMap<String, List<String>> edgeTokenizedPatternCache = new ConcurrentHashMap<>();
 
 	/**
 	 * Single atomic snapshot of all DML-derived in-memory index structures.
@@ -283,7 +293,7 @@ public class L1esMatchQuery extends MatchQueryParser {
 				if (mustMatchHashes.contains(hash)) continue;
 				String pattern = dmlDB.getPattern(hash);
 				if (pattern == null) continue;
-				List<String> patternTokens = tokenizePatternCached(hash, pattern, analyzerTokenizer);
+				List<String> patternTokens = tokenizePatternWithEdgesCached(hash, pattern, analyzerTokenizer);
 				if (crossChecker.test(patternTokens, true, false)) {
 					mightMatchHashes.add(hash);
 				}
@@ -347,7 +357,7 @@ public class L1esMatchQuery extends MatchQueryParser {
 			for (Map.Entry<String, String> entry : possibleMatchDmlEntries.entrySet()) {
 				String pattern = entry.getValue();
 
-				List<String> patternTokens = tokenizePatternCached(entry.getKey(), pattern, analyzerTokenizer);
+				List<String> patternTokens = tokenizePatternWithEdgesCached(entry.getKey(), pattern, analyzerTokenizer);
 
 				boolean canPossiblyMatch = crossChecker.test(patternTokens, true, false);
 
@@ -384,10 +394,18 @@ public class L1esMatchQuery extends MatchQueryParser {
 			AnalyzerTokenizer analyzerTokenizer) {
 		List<BytesRef> terms = new ArrayList<>();
 
+		List<Query> prefixes = new ArrayList<>();
+
 		for (String hash : hashes) {
 			List<String> tokens = analyzerTokenizer.tokenList(hash);
 			for (String token : tokens) {
 				terms.add(new BytesRef(token));
+			}
+
+			String runOn = AnalysisUtil.hashRunOnPrefix(hash, tokens, L1esConfig.get().encoder.valueSeparator);
+
+			if (runOn != null) {
+				prefixes.add(new PrefixQuery(new Term(fieldName, runOn)));
 			}
 		}
 
@@ -395,7 +413,20 @@ public class L1esMatchQuery extends MatchQueryParser {
 			return null;
 		}
 
-		return new TermInSetQuery(fieldName, terms);
+		Query termQuery = new TermInSetQuery(fieldName, terms);
+
+		if (prefixes.isEmpty()) {
+			return termQuery;
+		}
+
+		BooleanQuery.Builder builder = new BooleanQuery.Builder();
+		builder.add(new BooleanClause(termQuery, BooleanClause.Occur.SHOULD));
+
+		for (Query prefix : prefixes) {
+			builder.add(new BooleanClause(prefix, BooleanClause.Occur.SHOULD));
+		}
+
+		return builder.build();
 	}
 
 	/**
@@ -520,6 +551,31 @@ public class L1esMatchQuery extends MatchQueryParser {
 	}
 
 	/**
+	 * {@link #tokenizePatternCached} for {@link AnalysisUtil#tokenizePatternWithEdges}.
+	 */
+	private List<String> tokenizePatternWithEdgesCached(String hash, String pattern,
+			AnalyzerTokenizer analyzerTokenizer) {
+		List<String> cached = edgeTokenizedPatternCache.get(hash);
+		if (cached != null) {
+			return cached;
+		}
+
+		List<String> tokens = AnalysisUtil.tokenizePatternWithEdges(pattern, analyzerTokenizer);
+
+		if (edgeTokenizedPatternCache.size() >= TOKENIZED_PATTERN_CACHE_MAX) {
+			int toRemove = TOKENIZED_PATTERN_CACHE_MAX / 4;
+			Iterator<String> it = edgeTokenizedPatternCache.keySet().iterator();
+			for (int i = 0; i < toRemove && it.hasNext(); i++) {
+				it.next();
+				it.remove();
+			}
+		}
+
+		edgeTokenizedPatternCache.put(hash, tokens);
+		return tokens;
+	}
+
+	/**
 	 * Called when the DML configuration is updated (e.g., new templates added).
 	 * Invalidates all DML-derived caches so the next query rebuilds them.
 	 */
@@ -528,6 +584,7 @@ public class L1esMatchQuery extends MatchQueryParser {
 			dmlSnapshot = null;
 			dmlSnapshotRebuilding = false;
 			tokenizedPatternCache.clear();
+			edgeTokenizedPatternCache.clear();
 			indexedTidsSnapshot = null;
 			dmlSnapshotLock.notifyAll();
 		}
@@ -1065,7 +1122,7 @@ public class L1esMatchQuery extends MatchQueryParser {
 
 			if (phrasePredicate.test(patternTokens, false, false)) {
 				result.put(hash, Boolean.TRUE);
-			} else if (!phrasePredicate.test(patternTokens, true, true)) {
+			} else if (!phrasePredicate.test(tokenizePatternWithEdgesCached(hash, pattern, analyzerTokenizer), true, true)) {
 				result.put(hash, Boolean.FALSE);
 			}
 			// else: MIGHT_MATCH, not in the map
