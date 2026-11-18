@@ -1,0 +1,87 @@
+{
+ "note": "Templates and encoded lines the engine wrote for events read with CR LF (inside and at the end of an event), a CR alone inside an event, and the same lines read with LF; text is what each encoded line decodes to, without the LF that ends the event (FORMAT_SPEC S6.4).",
+ "timezoneOffsetMinutes": 0,
+ "templates": {
+  "-LV:;?CU8CK": "$(yyyy-MM-dd'T'HH:mm:ss'Z') plain line ten $\r",
+  "-0LfA.g$7T#": "$(yyyy-MM-dd'T'HH:mm:ss'Z') plain line ten $",
+  "2dQDVlI8R^": "$(yyyy-MM-dd'T'HH:mm:ss'Z') user=alice action=login result=ok\r",
+  "-Qgx8T}OelA": "$(yyyy-MM-dd'T'HH:mm:ss'Z') user=bob action=logout result=ok",
+  "-+.^k:Ag!!6": "service restarted at $(yyyy-MM-dd'T'HH:mm:ss'Z')\r",
+  "Eze3c!$WT[": "service restarted at $(yyyy-MM-dd'T'HH:mm:ss'Z')",
+  "$X*0E gNJ/": "<Data Name='AccessList'>%%$<//Data>\r",
+  "-.ICQ+J!j77": "Version : $\r",
+  "/k5]@E2oH9": "\r",
+  "-6q@$cq8yvS": "$(yyyy-MM-dd'T'HH:mm:ss'Z') path C:\\Program Files\\app\\/$Recycle.Bin\\a b.txt done\r",
+  "-8;vp/1<WA?": "<Event xmlns='http:////schemas.microsoft.com//win//$//$//events//event'><System><EventID>$<//EventID><TimeCreated SystemTime='$(yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS'Z')'//><//System><EventData><Data Name='AccessList'>%%$\r\n\t\t\t\t%%$\r\n\t\t\t\t<//Data><//EventData><//Event>\r",
+  "->CV:LpJEx;": "<Event xmlns='http:////schemas.microsoft.com//win//$//$//events//event'><System><EventID>$<//EventID><TimeCreated SystemTime='$(yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS'Z')'//><//System><EventData><Data Name='AccessList'>%%$\r\t\t\t\t%%$\r\n\t\t\t\t<//Data><//EventData><//Event>\r",
+  "9+/]]v9?vq": "<Event xmlns='http:////schemas.microsoft.com//win//$//$//events//event'><System><EventID>$<//EventID><TimeCreated SystemTime='$(yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS'Z')'//><//System><//Event>",
+  "-3j*?h.aGsG": "$(yyyy-MM-dd'T'HH:mm:ss.SSS'Z') ERROR [main] request failed\r\n\tat com.example.Foo.bar(Foo.java:$)\r\n\tat com.example.Foo.main(Foo.java:$)\r",
+  "-+khwR4P<Ic": "$(yyyy-MM-dd'T'HH:mm:ss.SSS'Z') ERROR [main] request failed\n\tat com.example.Foo.bar(Foo.java:$)\n\tat com.example.Foo.main(Foo.java:$)"
+ },
+ "events": [
+  {
+   "encoded": "~-LV:;?CU8CK,1662674173000,10",
+   "text": "2022-09-08T21:56:13Z plain line ten 10\r"
+  },
+  {
+   "encoded": "~-0LfA.g$7T#,1662674174000,11",
+   "text": "2022-09-08T21:56:14Z plain line ten 11"
+  },
+  {
+   "encoded": "~-LV:;?CU8CK,1662674175000,12",
+   "text": "2022-09-08T21:56:15Z plain line ten 12\r"
+  },
+  {
+   "encoded": "~2dQDVlI8R^,1662674176000",
+   "text": "2022-09-08T21:56:16Z user=alice action=login result=ok\r"
+  },
+  {
+   "encoded": "~-Qgx8T}OelA,1662674177000",
+   "text": "2022-09-08T21:56:17Z user=bob action=logout result=ok"
+  },
+  {
+   "encoded": "~-+.^k:Ag!!6,1662674178000",
+   "text": "service restarted at 2022-09-08T21:56:18Z\r"
+  },
+  {
+   "encoded": "~Eze3c!$WT[,1662674179000",
+   "text": "service restarted at 2022-09-08T21:56:19Z"
+  },
+  {
+   "encoded": "~$X*0E gNJ/,4432",
+   "text": "<Data Name='AccessList'>%%4432</Data>\r"
+  },
+  {
+   "encoded": "~-.ICQ+J!j77,4",
+   "text": "Version : 4\r"
+  },
+  {
+   "encoded": "~/k5]@E2oH9",
+   "text": "\r"
+  },
+  {
+   "encoded": "~-6q@$cq8yvS,1662674180000",
+   "text": "2022-09-08T21:56:20Z path C:\\Program Files\\app\\$Recycle.Bin\\a b.txt done\r"
+  },
+  {
+   "encoded": "~-8;vp/1<WA?,1662674181570487100,2004,08,4670,4432,4433",
+   "text": "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><EventID>4670</EventID><TimeCreated SystemTime='2022-09-08T21:56:21.570487100Z'/></System><EventData><Data Name='AccessList'>%%4432\r\n\t\t\t\t%%4433\r\n\t\t\t\t</Data></EventData></Event>\r"
+  },
+  {
+   "encoded": "~->CV:LpJEx;,1662674182570487100,2004,08,4670,4432,4433",
+   "text": "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><EventID>4670</EventID><TimeCreated SystemTime='2022-09-08T21:56:22.570487100Z'/></System><EventData><Data Name='AccessList'>%%4432\r\t\t\t\t%%4433\r\n\t\t\t\t</Data></EventData></Event>\r"
+  },
+  {
+   "encoded": "~9+/]]v9?vq,1662674183570487100,2004,08,4624",
+   "text": "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><EventID>4624</EventID><TimeCreated SystemTime='2022-09-08T21:56:23.570487100Z'/></System></Event>"
+  },
+  {
+   "encoded": "~-3j*?h.aGsG,1662674184123,10,5",
+   "text": "2022-09-08T21:56:24.123Z ERROR [main] request failed\r\n\tat com.example.Foo.bar(Foo.java:10)\r\n\tat com.example.Foo.main(Foo.java:5)\r"
+  },
+  {
+   "encoded": "~-+khwR4P<Ic,1662674185456,11,6",
+   "text": "2022-09-08T21:56:25.456Z ERROR [main] request failed\n\tat com.example.Foo.bar(Foo.java:11)\n\tat com.example.Foo.main(Foo.java:6)"
+  }
+ ]
+}
